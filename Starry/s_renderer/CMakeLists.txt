@@ -66,7 +66,7 @@ target_compile_definitions(${MAIN_LIB} PRIVATE "VERSION=\"${VERSION}\"")
 target_include_directories( ${MAIN_LIB}
     PRIVATE
     ${INCLUDE_DIR}
-    ${CMAKE_SOURCE_DIR}/s_manager/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../s_manager/include
 )
 
 target_include_directories( ${MAIN_LIB}

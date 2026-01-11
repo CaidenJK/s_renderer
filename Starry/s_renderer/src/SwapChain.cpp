@@ -40,7 +40,10 @@ namespace Render
 		if (device.wait() != Manager::State::YES || window.wait() != Manager::State::YES) {
 			Alert("Swap chain could not be created due to death of required resources.", FATAL);
 		}
-		auto supportDetails = querySwapChainSupport((*device).getPhysicalDevice(), (*device).getSurface());
+		auto pd = (*device).getPhysicalDevice();
+		auto surface = (*device).getSurface();
+
+		auto supportDetails = querySwapChainSupport(pd, surface);
 
 		cleanupSwapChain();
 		createSwapChain(supportDetails, (*device).getQueueFamilies(), (*device).getSurface());
