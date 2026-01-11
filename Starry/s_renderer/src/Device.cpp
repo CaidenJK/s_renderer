@@ -124,10 +124,11 @@ namespace Render
 		checkValidationLayerSupport();
 
 		createInstance();
-		createSurface();
 
 		setupDebugMessenger();
 		checkVKExtensions();
+
+		createSurface();
 
 		pickPhysicalDevice();
 		createLogicalDevice();
