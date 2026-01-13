@@ -109,7 +109,7 @@ namespace Render
 		info->QueueFamily = m_queueFamilyIndices.presentFamily.value();
 		info->Queue = m_presentQueue;
 		info->PipelineCache = nullptr;
-		info->DescriptorPool = nullptr;
+		info->DescriptorPool = descriptorPool;
 		info->MinImageCount = 2;
 		info->ImageCount = 0;
 		info->Allocator = nullptr;
@@ -135,6 +135,9 @@ namespace Render
 
 		createCommmandPool();
 		createCommandBuffers();
+
+		createDescriptorSetLayout();
+		createDescriptorPool();
 	}
 
 	void Device::setupDebugMessenger() 
@@ -601,10 +604,10 @@ namespace Render
 			numberOfIndices = static_cast<uint32_t>(vb->getNumIndices());
 		}
 
-		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline.getPipelineLayout(), 0, 1, &(info.descriptor.getDescriptorSet(m_currentFrame)), 0, nullptr);
-		
-		if (auto ub = info.Uniform.lock()) {
-			ub->updateUniform(m_currentFrame);
+		for (auto& descriptorSet : info.descriptorSets) {
+			if (auto descriptor = descriptorSet.lock()) {
+				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline.getPipelineLayout(), 0, 1, &(descriptor->getDescriptorSet(m_currentFrame)), 0, nullptr);
+			}
 		}
 
 		VkViewport viewport{};
@@ -819,6 +822,85 @@ namespace Render
 
 		vkFreeCommandBuffers(m_device, m_commandPool, 1, &commandBuffer);
 	}
+
+	void Device::createDescriptorSetLayout()
+	{
+		VkDescriptorSetLayoutBinding uboLayoutBinding{};
+		uboLayoutBinding.binding = 0;
+		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.descriptorCount = 1;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+        VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+        samplerLayoutBinding.binding = 1;
+        samplerLayoutBinding.descriptorCount = 1;
+        samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        samplerLayoutBinding.pImmutableSamplers = nullptr;
+        samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());;
+		layoutInfo.pBindings = bindings.data();
+		
+		if (vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+			Alert("Failed to create descriptor set layout!", FATAL);
+		}
+	}
+
+    void Device::createDescriptorPool()
+	{
+		std::array<VkDescriptorPoolSize, 3> poolSizes{};
+		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * MAX_OBJECTS);
+        poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * MAX_OBJECTS);
+
+		// ImGUI
+		poolSizes[2].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[2].descriptorCount = IMGUI_IMPL_VULKAN_MINIMUM_IMAGE_SAMPLER_POOL_SIZE;
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+		poolInfo.pPoolSizes = poolSizes.data();
+
+		poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+		poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT * MAX_OBJECTS) + poolSizes[2].descriptorCount;
+
+		if (vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+			Alert("Failed to create descriptor pool!", FATAL);
+			return;
+		}
+	}
+
+	 void Device::createDescriptorSets(std::shared_ptr<DescriptorSet>& descriptors)
+    {
+		if (descriptorPool == VK_NULL_HANDLE || descriptorSetLayout == VK_NULL_HANDLE) {
+			Alert("Descriptor pool or set layout not ready before allocating descriptor sets.", FATAL);
+			return;
+		}
+
+		std::vector<VkDescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
+
+		VkDescriptorSetAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = descriptorPool;
+		allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+		allocInfo.pSetLayouts = layouts.data();
+
+		descriptors->clear();
+		descriptors->create(allocInfo);
+
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			auto descriptorWrites = descriptors->getInfo(i);
+			vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+		}
+    }
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL Device::debugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

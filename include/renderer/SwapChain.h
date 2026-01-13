@@ -35,7 +35,7 @@ namespace Render
 
 	struct SwapChainConstructInfo
 	{
-		uint64_t windowUUID;
+		size_t windowUUID;
 	};
 
 	class SwapChain : public Manager::StarryAsset {
@@ -54,7 +54,7 @@ namespace Render
 			SwapChain operator=(const SwapChain&) = delete;
 			SwapChain(const SwapChain&) = delete;
 
-			void init(uint64_t deviceUUID, SwapChainConstructInfo info);
+			void init(size_t deviceUUID, SwapChainConstructInfo info);
 			void destroy();
 
 			void constructSwapChain();

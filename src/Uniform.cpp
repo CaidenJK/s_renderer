@@ -12,13 +12,13 @@ namespace Render
 	
 	Uniform::~Uniform()
 	{
+		Alert("UNIFORM DESTRUCT!", CRITICAL);
 		destroy();
 	}
 
-	void Uniform::init(uint64_t deviceUUID)
+	void Uniform::init(size_t deviceUUID)
 	{
 		device = Request<Device>(deviceUUID, "self");
-
 		createUniforms();
 	}
 
@@ -32,19 +32,9 @@ namespace Render
 		}
 	}
 
-	VkDescriptorBufferInfo Uniform::getDescriptorInfo(int image)
+	void Uniform::update(int frame)
 	{
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = Uniforms[image];
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(UniformData);
-
-		return bufferInfo;
-	}
-
-	void Uniform::updateUniform(uint32_t currentFrame) 
-	{
-		memcpy(UniformsMapped[currentFrame], &buffer, sizeof(buffer));
+		memcpy(UniformsMapped[frame], &buffer, sizeof(buffer));
 	}
 
 	void Uniform::createUniforms()
@@ -64,5 +54,25 @@ namespace Render
 
 			vkMapMemory((*device).getDevice(), UniformsMemory[i], 0, bufferSize, 0, &UniformsMapped[i]);
 		}
+	}
+
+	VkWriteDescriptorSet Uniform::createWrite(int frame, VkDescriptorSet& descriptorSet)
+	{
+		bufferInfo.buffer = Uniforms[frame];
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformData);
+
+		VkWriteDescriptorSet descriptorWrite{};
+		descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = descriptorSet;
+		descriptorWrite.dstBinding = 0;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.pBufferInfo = &bufferInfo;
+		descriptorWrite.pImageInfo = nullptr; // Optional
+		descriptorWrite.pTexelBufferView = nullptr; // Optional
+
+		return descriptorWrite;
 	}
 }

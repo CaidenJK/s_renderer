@@ -16,7 +16,7 @@ namespace Render
 		destroy();
 	}
 
-	void SwapChain::init(uint64_t deviceUUID, SwapChainConstructInfo info)
+	void SwapChain::init(size_t deviceUUID, SwapChainConstructInfo info)
 	{
 		device = Request<Device>(deviceUUID, "self");
 		window = Request<Window>(info.windowUUID, "self");

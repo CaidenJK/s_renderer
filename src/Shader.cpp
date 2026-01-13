@@ -15,7 +15,7 @@ namespace Render
 		destroy();
 	}
 
-	void Shader::init(uint64_t deviceUUID, ShaderConstructInfo info)
+	void Shader::init(size_t deviceUUID, ShaderConstructInfo info)
 	{
 		vertexShaderPath = info.vertexShaderPath;
 		fragmentShaderPath = info.fragmentShaderPath;

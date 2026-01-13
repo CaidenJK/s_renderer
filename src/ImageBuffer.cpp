@@ -14,7 +14,7 @@ namespace Render
         destroy();
     }
 
-    void ImageBuffer::init(uint64_t deviceUUID)
+    void ImageBuffer::init(size_t deviceUUID)
     {
         device = Request<Device>(deviceUUID, "self");
     }

@@ -19,13 +19,11 @@ namespace Render
         size_t windowUUID;
         size_t pipelineUUID;
         size_t swapChainUUID;
-        size_t descriptorUUID;
     };
 
     class Device;
     class Pipeline;
     class SwapChain;
-    class Descriptor;
 
     class Canvas : public Manager::StarryAsset
     {
@@ -48,7 +46,7 @@ namespace Render
             void initImGui();
             void setImGuiStyle();
 
-            void constructImGuiInfo(Pipeline& pipeline, SwapChain& swapChain, Descriptor& descriptor);
+            void constructImGuiInfo(Pipeline& pipeline, SwapChain& swapChain);
 
             void StartDraw(); // Main thread
             void EndDraw(); // Main thread

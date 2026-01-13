@@ -13,7 +13,7 @@ namespace Render
         destroy();
     }
 
-    void TextureImage::init(uint64_t deviceUUID)
+    void TextureImage::init(size_t deviceUUID)
     {
         ImageBuffer::init(deviceUUID);
 
@@ -27,16 +27,6 @@ namespace Render
         if (device) {
             if (imageSampler != VK_NULL_HANDLE) vkDestroySampler((*device).getDevice(), imageSampler, nullptr);
         }
-    }
-
-    VkDescriptorImageInfo TextureImage::getDescriptorInfo(int image)
-    {
-        VkDescriptorImageInfo imageInfo{};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = imageView;
-        imageInfo.sampler = imageSampler;
-
-        return imageInfo;
     }
     
     void TextureImage::loadFromFile()
@@ -123,5 +113,23 @@ namespace Render
             Alert("Failed to create texture sampler!", FATAL);
             return;
         }
+    }
+
+    VkWriteDescriptorSet TextureImage::createWrite(int frame, VkDescriptorSet& descriptorSet)
+    {
+        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        imageInfo.imageView = imageView;
+        imageInfo.sampler = imageSampler;
+
+        VkWriteDescriptorSet descriptorWrite{};
+        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = descriptorSet;
+		descriptorWrite.dstBinding = 1;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.pImageInfo = &imageInfo;
+
+        return descriptorWrite;
     }
 }

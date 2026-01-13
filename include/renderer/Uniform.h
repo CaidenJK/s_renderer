@@ -7,6 +7,8 @@
 
 #include "glm/glm.hpp"
 
+#include "DescriptorObject.h"
+
 namespace Render 
 {
 	struct UniformData {
@@ -17,23 +19,23 @@ namespace Render
 
 	class Device;
 
-	class Uniform : public Manager::StarryAsset
+	class Uniform : public Manager::StarryAsset, public DescriptorObject
 	{
 	public:
 		Uniform();
 		~Uniform();
 
-		void init(uint64_t deviceUUID);
-		void destroy();
+		void init(size_t deviceUUID) override;
+		void destroy() override;
 
 		UniformData& getBuffer() { return buffer; }
 		void setData(const UniformData& ubo) { buffer = ubo; }
 
-		VkDescriptorBufferInfo getDescriptorInfo(int image);
+		void update(int frame) override;
 
-		void updateUniform(uint32_t currentFrame);
+		VkWriteDescriptorSet createWrite(int frame, VkDescriptorSet& descriptorSet) override;
 
-		ASSET_NAME("Uniform Buffer")
+		const std::string getAssetName() override {	return "Uniform Buffer"; }
 	private:
 		void createUniforms();
 
@@ -42,6 +44,8 @@ namespace Render
 		std::vector<VkBuffer> Uniforms;
 		std::vector<VkDeviceMemory> UniformsMemory;
 		std::vector<void*> UniformsMapped;
+
+		VkDescriptorBufferInfo bufferInfo{};
 
 		Manager::ResourceHandle<Device> device;
 	};

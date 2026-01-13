@@ -4,7 +4,6 @@
 
 #include "Pipeline.h"
 #include "SwapChain.h"
-#include "Descriptor.h"
 
 namespace Render
 {
@@ -15,13 +14,11 @@ namespace Render
 
     Canvas::~Canvas()
     {
-
     }
 
-    void Canvas::constructImGuiInfo(Pipeline& pipeline, SwapChain& swapChain, Descriptor& descriptor)
+    void Canvas::constructImGuiInfo(Pipeline& pipeline, SwapChain& swapChain)
     {
         (*device).fillImGuiInfo(&guiInfo);
-        guiInfo.DescriptorPool = descriptor.getPool();
         guiInfo.MinImageCount = swapChain.getImageCount();
         guiInfo.ImageCount = swapChain.getImageCount();
         guiInfo.PipelineInfoMain.RenderPass = pipeline.getRenderPass();
@@ -34,18 +31,16 @@ namespace Render
 
         auto pipeline = Request<Pipeline>(info.pipelineUUID, "self");
         auto swapChain = Request<SwapChain>(info.swapChainUUID, "self");
-        auto descriptor = Request<Descriptor>(info.descriptorUUID, "self");
 
         if (device.wait() != Manager::State::YES ||
             window.wait() != Manager::State::YES ||
             pipeline.wait() != Manager::State::YES ||
-            swapChain.wait() != Manager::State::YES ||
-            descriptor.wait() != Manager::State::YES ) {
+            swapChain.wait() != Manager::State::YES ) {
             Alert("Dependencies passed are not valid!", CRITICAL);
             return;
         }
 
-        constructImGuiInfo(*pipeline, *swapChain, *descriptor);
+        constructImGuiInfo(*pipeline, *swapChain);
         initImGui();
     }
 

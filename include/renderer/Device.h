@@ -15,7 +15,7 @@
 #include "Buffer.h"
 #include "Uniform.h"
 #include "TextureImage.h"
-#include "Descriptor.h"
+#include "DescriptorSet.h"
 
 #include "Canvas.h"
 
@@ -45,9 +45,9 @@ namespace Render
 	{
 		Pipeline& pipeline;
 		SwapChain& swapChain;
-		Descriptor& descriptor;
+		
+		std::vector<std::weak_ptr<DescriptorSet>>& descriptorSets;
 
-		std::weak_ptr<Uniform>& Uniform;
 		std::weak_ptr<Buffer>& Buffer;
 		std::weak_ptr<Canvas>& canvas;
 	};
@@ -93,6 +93,9 @@ namespace Render
 		VkCommandBuffer beginSingleTimeCommands();
 		void endSingleTimeCommands(VkCommandBuffer& commandBuffer);
 
+		VkDescriptorSetLayout& getDescriptorSetLayout() { return descriptorSetLayout; }
+		void createDescriptorSets(std::shared_ptr<DescriptorSet>& descriptors);
+
 		void fillImGuiInfo(ImGui_ImplVulkan_InitInfo* info);
 
 		ASSET_NAME("Render Device")
@@ -132,6 +135,9 @@ namespace Render
 
 		QueueFamilyIndices findQueueFamilies(VkPhysicalDevice physicalDevice);
 		bool checkDeviceExtensionSupport(VkPhysicalDevice physicalDevice);
+
+		void createDescriptorSetLayout();
+        void createDescriptorPool();
 
 		DeviceConfig m_config = {};
 
@@ -182,6 +188,9 @@ namespace Render
 		std::vector<VkFence> m_inFlightFences = {};
 
 		uint32_t m_currentFrame = 0;
+
+		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+		VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 
 		VkPhysicalDeviceMemoryProperties m_memProperties = {};
 

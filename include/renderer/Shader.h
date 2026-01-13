@@ -24,7 +24,7 @@ namespace Render
 			Shader();
 			~Shader();
 
-			void init(uint64_t deviceUUID, ShaderConstructInfo info);
+			void init(size_t deviceUUID, ShaderConstructInfo info);
 			void destroy();
 
 			std::array<VkPipelineShaderStageCreateInfo, 2>& getShaderStages() { return shaderStages; }

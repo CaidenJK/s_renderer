@@ -56,7 +56,7 @@ namespace Render
 		destroy();
 	}
 
-	void Buffer::init(uint64_t deviceUUID)
+	void Buffer::init(size_t deviceUUID)
 	{
 		device = Request<Device>(deviceUUID, "self");
 

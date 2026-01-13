@@ -13,22 +13,20 @@ namespace Render
 		destroy();
 	}
 
-	void Pipeline::init(uint64_t deviceUUID, PipelineConstructInfo info)
+	void Pipeline::init(size_t deviceUUID, PipelineConstructInfo info)
 	{
 		device = Request<Device>(deviceUUID, "self");
 
 		auto shader = Request<Shader>(info.shaderUUID, "self");
-		auto descriptor = Request<Descriptor>(info.descriptorUUID, "self");
 		auto swapChain = Request<SwapChain>(info.swapChainUUID, "self");
 
 		if (device.wait() != Manager::State::YES ||
 			shader.wait() != Manager::State::YES ||
-			descriptor.wait() != Manager::State::YES ||
 			swapChain.wait() != Manager::State::YES) {
 			Alert("Resources died before they were ready to be used.", FATAL);
 			return;
 		}
-		constructPipeline(*swapChain, *shader, *descriptor);
+		constructPipeline(*swapChain, *shader);
 	}
 
 	void Pipeline::destroy()
@@ -41,7 +39,7 @@ namespace Render
 		}
 	}
 
-	void Pipeline::constructPipeline(SwapChain& swapChain, Shader& shader, Descriptor& descriptor)
+	void Pipeline::constructPipeline(SwapChain& swapChain, Shader& shader)
 	{
 		if (graphicsPipeline != VK_NULL_HANDLE || getAlertSeverity() == FATAL) {
 			Alert("Warning: constructPipeline called more than once. All calls other than the first are skipped.", WARNING);
@@ -49,7 +47,7 @@ namespace Render
 		}
 
 		createRenderPass(swapChain);
-		constructPipelineLayout(shader, descriptor);
+		constructPipelineLayout(shader);
 
 		Alert("Successful Pipeline Creation!", INFO);
 	}
@@ -140,7 +138,7 @@ namespace Render
 		}
 	}
 
-	void Pipeline::constructPipelineLayout(Shader& shader, Descriptor& descriptor)
+	void Pipeline::constructPipelineLayout(Shader& shader)
 	{
 		auto msaaSamples = (*device).getConfig().desiredMSAASamples;
 
@@ -228,12 +226,12 @@ namespace Render
 		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-		if (descriptor.getDescriptorSetLayout() == VK_NULL_HANDLE) {
+		if ((*device).getDescriptorSetLayout() == VK_NULL_HANDLE) {
 			Alert("Descriptor has error before pipeline construction!", FATAL);
 			return;
 		}
 		pipelineLayoutInfo.setLayoutCount = 1;
-		pipelineLayoutInfo.pSetLayouts = &(descriptor.getDescriptorSetLayout());
+		pipelineLayoutInfo.pSetLayouts = &((*device).getDescriptorSetLayout());
 
 		if (device.wait() != Manager::State::YES) {
 			Alert("Device died before it was ready to be used.", FATAL);

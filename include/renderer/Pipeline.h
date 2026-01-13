@@ -11,7 +11,6 @@
 
 #include "Buffer.h"
 #include "Shader.h"
-#include "Descriptor.h"
 #include "SwapChain.h"
 
 #define ERROR_VOLATILE(x) x; if (getAlertSeverity() == FATAL) { return; }
@@ -22,9 +21,8 @@ namespace Render
 
 	struct PipelineConstructInfo
 	{
-		uint64_t swapChainUUID;
-		uint64_t descriptorUUID;
-		uint64_t shaderUUID;
+		size_t swapChainUUID;
+		size_t shaderUUID;
 	};
 
 	class Pipeline : public Manager::StarryAsset {
@@ -32,7 +30,7 @@ namespace Render
 		Pipeline();
 		~Pipeline();
 
-		void init(uint64_t deviceUUID, PipelineConstructInfo info);
+		void init(size_t deviceUUID, PipelineConstructInfo info);
 		void destroy();
 
 		Pipeline operator=(const Pipeline&) = delete;
@@ -45,9 +43,9 @@ namespace Render
 		ASSET_NAME("Pipeline")
 
 	private:
-		void constructPipeline(SwapChain& swapChain, Shader& shader, Descriptor& descriptor);
+		void constructPipeline(SwapChain& swapChain, Shader& shader);
 		void createRenderPass(SwapChain& swapChain);
-		void constructPipelineLayout(Shader& shader, Descriptor& descriptor);
+		void constructPipelineLayout(Shader& shader);
 
 		VkPipelineVertexInputStateCreateInfo createVertexInputInfo();
 

@@ -1,5 +1,7 @@
 #include "RenderContext.h"
 
+#include <chrono>
+
 #define ERROR_CHECK if (getRenderErrorState()) { return; }
 #define EXTERN_ERROR(x) if(x->getAlertSeverity() == StarryAsset::FATAL) { return; }
 
@@ -28,16 +30,17 @@ namespace Render {
 
 	void RenderContext::Init(std::shared_ptr<Window>& window, RenderConfig config)
 	{
+		m_state.isInitialized = false;
+
 		m_config = config;
 		auto deviceConfig = DeviceConfig{ m_config.msaaSamples, m_config.clearColor, window};
 		m_renderDevice.init(deviceConfig);
 
 		m_shaders.init(m_renderDevice.getUUID(), { config.vertexShader, config.fragmentShader });
-		m_descriptor.init(m_renderDevice.getUUID());
 		
 		m_renderSwapchain.init(m_renderDevice.getUUID(), { window->getUUID() });
 
-		PipelineConstructInfo info = { m_renderSwapchain.getUUID(), m_descriptor.getUUID(), m_shaders.getUUID() };
+		PipelineConstructInfo info = { m_renderSwapchain.getUUID(), m_shaders.getUUID() };
 		m_renderPipeline.init(m_renderDevice.getUUID(), info);
 
 		m_renderSwapchain.generateFramebuffers(m_renderPipeline.getRenderPass());
@@ -45,32 +48,31 @@ namespace Render {
 		m_window = window;
 	}
 
-	void RenderContext::Load(std::shared_ptr<Uniform>& buffer)
+	void RenderContext::Load(std::shared_ptr<DescriptorSet>& descriptor)
 	{
-		buffer->init(m_renderDevice.getUUID());
-		m_ub = buffer;
-	}
+		m_state.isInitialized = false;
 
-	void RenderContext::Load(std::shared_ptr<TextureImage>& img)
-	{
-		img->init(m_renderDevice.getUUID());
-		m_tx = img;
+		descriptor->init(m_renderDevice.getUUID());
+		m_descriptors.emplace_back(descriptor);
 	}
 
 	void RenderContext::Load(std::shared_ptr<Buffer>& buffer)
 	{
+		m_state.isInitialized = false;
+
 		buffer->init(m_renderDevice.getUUID());
 		m_buffer = buffer;
 	}
 
 	void RenderContext::Load(std::shared_ptr<Canvas>& canvas)
 	{
+		m_state.isInitialized = false;
+
 		if (auto window = m_window.lock()) {
 			CanvasConstructInfo info{
 				window->getUUID(),
 				m_renderPipeline.getUUID(),
-				m_renderSwapchain.getUUID(),
-				m_descriptor.getUUID()
+				m_renderSwapchain.getUUID()
 			};
 
 			canvas->init(m_renderDevice.getUUID(), info);
@@ -84,13 +86,14 @@ namespace Render {
 	void RenderContext::Ready()
 	{
 		m_renderDevice.createDependencies({ (int)m_renderSwapchain.getImageCount() });
-
-		uint64_t ub = 0;
-		uint64_t tx = 0;
-
-		if (auto ubRef = m_ub.lock()) ub = ubRef->getUUID();
-		if (auto txRef = m_tx.lock()) tx = txRef->getUUID();
-		m_descriptor.createDescriptorSets(ub, tx);
+		for (auto descriptor : m_descriptors) {
+			if (auto dscptr = descriptor.lock()) {
+				m_renderDevice.createDescriptorSets(dscptr);
+			}
+			else {
+				Alert("One or more Descriptor references are invalid", WARNING);
+			}
+		}
 
 		m_state.isInitialized = true;
 	}
@@ -134,8 +137,7 @@ namespace Render {
 		DrawInfo drawInfo = {
 			m_renderPipeline,
 			m_renderSwapchain,
-			m_descriptor,
-			m_ub,
+			m_descriptors,
 			m_buffer,
 			m_cnvs
 		};
@@ -145,10 +147,17 @@ namespace Render {
 
 	void RenderContext::Destroy()
 	{
+		m_state.isInitialized = false;
+		
 		m_shaders.destroy();
-		m_descriptor.destroy();
 		m_renderSwapchain.destroy();
 		m_renderPipeline.destroy();
+
+		for (auto descriptor : m_descriptors) {
+			if (auto dscptr = descriptor.lock()) {
+				dscptr->destroy();
+			}
+		}
 
 		m_renderDevice.destroy();
 	}

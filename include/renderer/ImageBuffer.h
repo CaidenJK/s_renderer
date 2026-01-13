@@ -16,7 +16,7 @@ namespace Render
 		ImageBuffer();
 		~ImageBuffer();
 
-		virtual void init(uint64_t deviceUUID);
+		virtual void init(size_t deviceUUID);
 		virtual void destroy();
 
 		void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format,

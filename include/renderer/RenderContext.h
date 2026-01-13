@@ -56,8 +56,7 @@ namespace Render
 
 		void Init(std::shared_ptr<Window>& window, RenderConfig config);
 
-		void Load(std::shared_ptr<Uniform>& buffer);
-		void Load(std::shared_ptr<TextureImage>& img);
+		void Load(std::shared_ptr<DescriptorSet>& descriptor);
 		void Load(std::shared_ptr<Buffer>& buffer);
 
 		void Load(std::shared_ptr<Canvas>& canvas);
@@ -87,12 +86,10 @@ namespace Render
 		Pipeline m_renderPipeline{};
 		SwapChain m_renderSwapchain{};
 		Shader m_shaders{};
-		Descriptor m_descriptor{};
 
 		// extern
+		std::vector<std::weak_ptr<DescriptorSet>> m_descriptors;
 		std::weak_ptr<Buffer> m_buffer;
-		std::weak_ptr<Uniform> m_ub;
-		std::weak_ptr<TextureImage> m_tx;
 		std::weak_ptr<Canvas> m_cnvs;
 	};
 

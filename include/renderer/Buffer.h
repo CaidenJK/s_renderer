@@ -43,7 +43,7 @@ namespace Render
 			Buffer();
 			~Buffer();
 
-			void init(uint64_t deviceUUID);
+			void init(size_t deviceUUID);
 			void destroy();
 
 			void add(Buffer& other);

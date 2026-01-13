@@ -1,27 +1,29 @@
 #pragma once 
 
 #include <StarryManager.h>
+
 #include "ImageBuffer.h"
+#include "DescriptorObject.h"
 
 namespace Render
 {
     class Device;
 
-    class TextureImage : public ImageBuffer
+    class TextureImage : public ImageBuffer, public DescriptorObject
     {
         public:
             TextureImage();
             ~TextureImage();
 
-            void init(uint64_t deviceUUID) override;
+            void init(size_t deviceUUID) override;
             void destroy() override;
 
 			void storeFilePath(const std::string& path) { filePath = path; }
             void loadFromFile();
 
-            VkDescriptorImageInfo getDescriptorInfo(int image);
+            VkWriteDescriptorSet createWrite(int frame, VkDescriptorSet& descriptorSet) override;
 
-            ASSET_NAME("TextureImage")
+            const std::string getAssetName() override {	return "Texture Image"; }
         private:
             void loadImageToMemory(VkDeviceSize imageSize, Manager::ImageFile* file);
 
@@ -36,5 +38,7 @@ namespace Render
             VkDeviceMemory stagingBufferMemory = VK_NULL_HANDLE;
             
             VkSampler imageSampler = VK_NULL_HANDLE;
+
+            VkDescriptorImageInfo imageInfo{};
     };
 }
