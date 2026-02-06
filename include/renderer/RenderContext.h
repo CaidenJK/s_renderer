@@ -83,8 +83,9 @@ namespace Render
 		std::weak_ptr<Window> m_window;
 
 		Device m_renderDevice{};
-		Pipeline m_renderPipeline{};
 		SwapChain m_renderSwapchain{};
+		RenderPass m_renderPass{};
+		Pipeline m_renderPipeline{};
 		Shader m_shaders{};
 
 		std::shared_ptr<DescriptorSet> m_descriptorSet;

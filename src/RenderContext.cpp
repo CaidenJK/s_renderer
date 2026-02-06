@@ -44,11 +44,12 @@ namespace Render {
 		m_shaders.init(m_renderDevice.getUUID(), { config.vertexShader, config.fragmentShader });
 		
 		m_renderSwapchain.init(m_renderDevice.getUUID(), { window->getUUID() });
+		m_renderPass.init(m_renderDevice.getUUID(), {m_renderSwapchain.getImageFormats()});
 
-		PipelineConstructInfo info = { m_renderSwapchain.getUUID(), m_shaders.getUUID() };
+		PipelineConstructInfo info = { m_renderPass.getUUID(), m_shaders.getUUID() };
 		m_renderPipeline.init(m_renderDevice.getUUID(), info);
 
-		m_renderSwapchain.generateFramebuffers(m_renderPipeline.getRenderPass());
+		m_renderSwapchain.generateFramebuffers(m_renderPass.getRenderPass());
 
 		m_window = window;
 
@@ -78,7 +79,7 @@ namespace Render {
 		if (auto window = m_window.lock()) {
 			CanvasConstructInfo info{
 				window->getUUID(),
-				m_renderPipeline.getUUID(),
+				m_renderPass.getUUID(),
 				m_renderSwapchain.getUUID()
 			};
 
@@ -113,7 +114,7 @@ namespace Render {
 		WaitIdle();
 
 		m_renderSwapchain.constructSwapChain();
-		m_renderSwapchain.generateFramebuffers(m_renderPipeline.getRenderPass());
+		m_renderSwapchain.generateFramebuffers(m_renderPass.getRenderPass());
 	}
 
 	void RenderContext::Draw()
@@ -138,6 +139,7 @@ namespace Render {
 
 		DrawInfo drawInfo = {
 			m_renderPipeline,
+			m_renderPass,
 			m_renderSwapchain,
 			m_descriptorSet,
 			m_buffer,

@@ -11,7 +11,7 @@
 
 #include "Buffer.h"
 #include "Shader.h"
-#include "SwapChain.h"
+#include "RenderPass.h"
 
 #define ERROR_VOLATILE(x) x; if (getAlertSeverity() == FATAL) { return; }
 
@@ -21,7 +21,7 @@ namespace Render
 
 	struct PipelineConstructInfo
 	{
-		size_t swapChainUUID;
+		size_t renderPassUUID;
 		size_t shaderUUID;
 	};
 
@@ -36,20 +36,16 @@ namespace Render
 		Pipeline operator=(const Pipeline&) = delete;
 		Pipeline(const Pipeline&) = delete;
 
-		VkRenderPass& getRenderPass() { return renderPass; }
 		VkPipelineLayout& getPipelineLayout() { return pipelineLayout; }
 		VkPipeline& getPipeline() { return graphicsPipeline; }
 
 		ASSET_NAME("Pipeline")
 
 	private:
-		void constructPipeline(SwapChain& swapChain, Shader& shader);
-		void createRenderPass(SwapChain& swapChain);
-		void constructPipelineLayout(Shader& shader);
+		void constructPipelineLayout(RenderPass& renderPass, Shader& shader);
 
 		VkPipelineVertexInputStateCreateInfo createVertexInputInfo();
 
-		VkRenderPass renderPass = VK_NULL_HANDLE;
 		VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
 		VkPipeline graphicsPipeline = VK_NULL_HANDLE;
 

@@ -54,6 +54,7 @@ namespace Render
 	struct DrawInfo
 	{
 		Pipeline& pipeline;
+		RenderPass& renderPass;
 		SwapChain& swapChain;
 		
 		std::shared_ptr<DescriptorSet>& descriptorSet;

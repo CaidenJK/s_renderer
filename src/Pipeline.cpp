@@ -18,128 +18,33 @@ namespace Render
 		device = Request<Device>(deviceUUID, "self");
 
 		auto shader = Request<Shader>(info.shaderUUID, "self");
-		auto swapChain = Request<SwapChain>(info.swapChainUUID, "self");
+		auto renderPass = Request<RenderPass>(info.renderPassUUID, "self");
 
 		if (device.wait() != Manager::State::YES ||
 			shader.wait() != Manager::State::YES ||
-			swapChain.wait() != Manager::State::YES) {
+			renderPass.wait() != Manager::State::YES) {
 			Alert("Resources died before they were ready to be used.", FATAL);
 			return;
 		}
-		constructPipeline(*swapChain, *shader);
+		constructPipelineLayout(*renderPass, *shader);
 	}
 
 	void Pipeline::destroy()
 	{
 		if (device) {
 			vkDestroyPipelineLayout((*device).getDevice(), pipelineLayout, nullptr);
-			vkDestroyRenderPass((*device).getDevice(), renderPass, nullptr);
 
 			vkDestroyPipeline((*device).getDevice(), graphicsPipeline, nullptr);
 		}
 	}
 
-	void Pipeline::constructPipeline(SwapChain& swapChain, Shader& shader)
+	void Pipeline::constructPipelineLayout(RenderPass& renderPass, Shader& shader)
 	{
 		if (graphicsPipeline != VK_NULL_HANDLE || getAlertSeverity() == FATAL) {
 			Alert("Warning: constructPipeline called more than once. All calls other than the first are skipped.", WARNING);
 			return;
 		}
 
-		createRenderPass(swapChain);
-		constructPipelineLayout(shader);
-
-		Alert("Successful Pipeline Creation!", INFO);
-	}
-
-	void Pipeline::createRenderPass(SwapChain& swapChain)
-	{
-		auto msaaSamples = (*device).getConfig().desiredMSAASamples;
-		auto imageFormats = swapChain.getImageFormats();
-
-		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format = imageFormats[0];
-		colorAttachment.samples = msaaSamples;
-
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
-		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentReference colorAttachmentRef{};
-		colorAttachmentRef.attachment = 0;
-		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentDescription depthAttachment{};
-		depthAttachment.format = imageFormats[1];
-		depthAttachment.samples = msaaSamples;
-		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentReference depthAttachmentRef{};
-		depthAttachmentRef.attachment = 1;
-		depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-		VkAttachmentDescription colorAttachmentResolve{};
-		colorAttachmentResolve.format = imageFormats[0];
-		colorAttachmentResolve.samples = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachmentResolve.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachmentResolve.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		colorAttachmentResolve.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachmentResolve.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachmentResolve.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachmentResolve.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		VkAttachmentReference colorAttachmentResolveRef{};
-		colorAttachmentResolveRef.attachment = 2;
-		colorAttachmentResolveRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkSubpassDescription subpass{};
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &colorAttachmentRef;
-		subpass.pDepthStencilAttachment = &depthAttachmentRef;
-		subpass.pResolveAttachments = &colorAttachmentResolveRef;
-
-		VkSubpassDependency dependency{};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-		dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-
-		std::array<VkAttachmentDescription, 3> attachments = { colorAttachment, depthAttachment, colorAttachmentResolve };
-		VkRenderPassCreateInfo renderPassInfo{};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-		renderPassInfo.pAttachments = attachments.data();
-		renderPassInfo.subpassCount = 1;
-		renderPassInfo.pSubpasses = &subpass;
-		renderPassInfo.dependencyCount = 1;
-		renderPassInfo.pDependencies = &dependency;
-
-		if (device.wait() != Manager::State::YES) {
-			Alert("Device died before it was ready to be used.", FATAL);
-			return;
-		}
-
-		if (vkCreateRenderPass((*device).getDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
-			Alert("Failed to create render pass!", FATAL);
-			return;
-		}
-	}
-
-	void Pipeline::constructPipelineLayout(Shader& shader)
-	{
 		auto msaaSamples = (*device).getConfig().desiredMSAASamples;
 
 		// Verts
@@ -275,7 +180,7 @@ namespace Render
 		pipelineInfo.pDynamicState = &dynamicState;
 
 		pipelineInfo.layout = pipelineLayout;
-		pipelineInfo.renderPass = renderPass;
+		pipelineInfo.renderPass = renderPass.getRenderPass();
 		pipelineInfo.subpass = 0;
 
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional

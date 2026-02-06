@@ -576,7 +576,7 @@ namespace Render
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = info.pipeline.getRenderPass();
+		renderPassInfo.renderPass = info.renderPass.getRenderPass();
 		renderPassInfo.framebuffer = info.swapChain.getFramebuffers()[imageIndex]; // Here
 
 		renderPassInfo.renderArea.offset = { 0, 0 };

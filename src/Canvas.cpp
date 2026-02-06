@@ -16,12 +16,12 @@ namespace Render
     {
     }
 
-    void Canvas::constructImGuiInfo(Pipeline& pipeline, SwapChain& swapChain)
+    void Canvas::constructImGuiInfo(RenderPass& renderPass, SwapChain& swapChain)
     {
         (*device).fillImGuiInfo(&guiInfo);
         guiInfo.MinImageCount = swapChain.getImageCount();
         guiInfo.ImageCount = swapChain.getImageCount();
-        guiInfo.PipelineInfoMain.RenderPass = pipeline.getRenderPass();
+        guiInfo.PipelineInfoMain.RenderPass = renderPass.getRenderPass();
     }
 
     void Canvas::init(size_t deviceUUID, CanvasConstructInfo info)
@@ -29,18 +29,18 @@ namespace Render
         device = Request<Device>(deviceUUID, "self");
         window = Request<Window>(info.windowUUID, "self");
 
-        auto pipeline = Request<Pipeline>(info.pipelineUUID, "self");
+        auto renderPass = Request<RenderPass>(info.renderPassUUID, "self");
         auto swapChain = Request<SwapChain>(info.swapChainUUID, "self");
 
         if (device.wait() != Manager::State::YES ||
             window.wait() != Manager::State::YES ||
-            pipeline.wait() != Manager::State::YES ||
+            renderPass.wait() != Manager::State::YES ||
             swapChain.wait() != Manager::State::YES ) {
             Alert("Dependencies passed are not valid!", CRITICAL);
             return;
         }
 
-        constructImGuiInfo(*pipeline, *swapChain);
+        constructImGuiInfo(*renderPass, *swapChain);
         initImGui();
     }
 

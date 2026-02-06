@@ -11,13 +11,14 @@
 #include <imgui_impl_glfw.h>
 
 #include "Window.h"
+#include "RenderPass.h"
 
 namespace Render
 {
     struct CanvasConstructInfo
     {
         size_t windowUUID;
-        size_t pipelineUUID;
+        size_t renderPassUUID;
         size_t swapChainUUID;
     };
 
@@ -46,7 +47,7 @@ namespace Render
             void initImGui();
             void setImGuiStyle();
 
-            void constructImGuiInfo(Pipeline& pipeline, SwapChain& swapChain);
+            void constructImGuiInfo(RenderPass& renderPass, SwapChain& swapChain);
 
             void StartDraw(); // Main thread
             void EndDraw(); // Main thread
