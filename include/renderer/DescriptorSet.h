@@ -8,21 +8,13 @@
 #include <vector>
 
 #define MAX_FRAMES_IN_FLIGHT 2
-#define MAX_OBJECTS 100
+#define MAX_OBJECTS 64
 
-#include "DescriptorObject.h"
-#include "Uniform.h"
-#include "TextureImage.h"
+#include "DescriptorResource.h"
 
 namespace Render
 {
     class Device;
-
-    struct Descriptors
-    {
-        Manager::ResourceHandle<Uniform> uniformObject;
-        Manager::ResourceHandle<TextureImage> textureObject;
-    };
 
     class DescriptorSet : public Manager::StarryAsset
     {
@@ -37,9 +29,9 @@ namespace Render
             void create(VkDescriptorSetAllocateInfo allocInfo);
             void clear();
 
-            std::array<VkWriteDescriptorSet, 2> getInfo(int frame);
+            std::vector<VkWriteDescriptorSet> getInfo(int frame);
             
-            void addDescriptors(std::array<size_t, 2> objects);
+            void addDescriptorResource(std::weak_ptr<DescriptorResource>& descriptorResource);
 		    VkDescriptorSet& getDescriptorSet(uint32_t frame);
 
             void bind(VkCommandBuffer& commandBuffer, int frame);
@@ -50,7 +42,7 @@ namespace Render
 
             Manager::ResourceHandle<Device> device;
 
-            Descriptors descriptors;
+            std::vector<std::weak_ptr<DescriptorResource>> descriptorResources;
 
             static int amountOfObjects;
     };

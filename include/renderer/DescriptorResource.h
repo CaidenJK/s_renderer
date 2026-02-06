@@ -9,16 +9,16 @@
 
 namespace Render
 {
-    class DescriptorObject
+    class DescriptorResource
     {
         public:
-            DescriptorObject() {}
-            ~DescriptorObject() {}
+            DescriptorResource() {}
+            ~DescriptorResource() {}
 
             virtual void init(size_t deviceUUID) = 0;
             virtual void destroy() = 0;
             
-            virtual VkWriteDescriptorSet createWrite(int frame, VkDescriptorSet& descriptorSet) = 0;
+            virtual VkWriteDescriptorSet createWrite(int frame, VkDescriptorSet& descriptorSet) = 0; // to bind
             virtual void update(int frame) {}
     };
 }

@@ -56,7 +56,7 @@ namespace Render
 
 		void Init(std::shared_ptr<Window>& window, RenderConfig config);
 
-		void Load(std::shared_ptr<DescriptorSet>& descriptor);
+		void Load(std::shared_ptr<DescriptorResource>& descriptorResource);
 		void Load(std::shared_ptr<Buffer>& buffer);
 
 		void Load(std::shared_ptr<Canvas>& canvas);
@@ -87,8 +87,10 @@ namespace Render
 		SwapChain m_renderSwapchain{};
 		Shader m_shaders{};
 
+		std::shared_ptr<DescriptorSet> m_descriptorSet;
+
 		// extern
-		std::vector<std::weak_ptr<DescriptorSet>> m_descriptors;
+		std::vector<std::weak_ptr<DescriptorResource>> m_descriptorResources;
 		std::weak_ptr<Buffer> m_buffer;
 		std::weak_ptr<Canvas> m_cnvs;
 	};

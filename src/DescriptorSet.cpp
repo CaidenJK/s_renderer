@@ -30,22 +30,19 @@ namespace Render
 	{
 		device = Request<Device>(deviceUUID, "self");
 
-		if (descriptors.uniformObject.wait() != Manager::State::YES ||
-			descriptors.textureObject.wait() != Manager::State::YES) {
-			Alert("Failed to retrieve Descriptor Objects!", FATAL);
-			return;
+		for (auto descriptorResource : descriptorResources) {
+			if (auto ptr = descriptorResource.lock()) {
+				ptr->init(deviceUUID);
+			}
 		}
-		(*descriptors.uniformObject).init(deviceUUID);
-		(*descriptors.textureObject).init(deviceUUID);
 	}
 
 	void DescriptorSet::destroy()
 	{
-		if (descriptors.uniformObject.wait() == Manager::State::YES) {
-			(*descriptors.uniformObject).destroy();
-		}
-		if (descriptors.textureObject.wait() == Manager::State::YES) {
-			(*descriptors.textureObject).destroy();
+		for (auto descriptorResource : descriptorResources) {
+			if (auto ptr = descriptorResource.lock()) {
+				ptr->destroy();
+			}
 		}
 	}
 
@@ -59,6 +56,11 @@ namespace Render
 			Alert("Failed to allocate descriptor sets!", FATAL);
 			return;
 		}
+
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			auto descriptorWrites = getInfo(i);
+			vkUpdateDescriptorSets((*device).getDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+		}
 	}
 
 	void DescriptorSet::clear()
@@ -66,37 +68,31 @@ namespace Render
 		descriptorSets = {VK_NULL_HANDLE, VK_NULL_HANDLE};
 	}
 
-	void DescriptorSet::addDescriptors(std::array<size_t, 2> objects)
+	void DescriptorSet::addDescriptorResource(std::weak_ptr<DescriptorResource>& descriptorResource)
 	{
-		descriptors.uniformObject = Request<Uniform>(objects[0], "self");
-		descriptors.textureObject = Request<TextureImage>(objects[1], "self");
+		descriptorResources.emplace_back(descriptorResource);
 	}
 
-	std::array<VkWriteDescriptorSet, 2> DescriptorSet::getInfo(int frame)
+	std::vector<VkWriteDescriptorSet> DescriptorSet::getInfo(int frame)
 	{ // TODO: Logging with custom types, Dump info in object
 
-		if (descriptors.uniformObject.wait() != Manager::State::YES ||
-			descriptors.textureObject.wait() != Manager::State::YES) {
-			Alert("Failed to retrieve Descriptor Objects!", FATAL);
-			return {};
+		std::vector<VkWriteDescriptorSet> descriptorWrites;
+		for (auto descriptorResource : descriptorResources) {
+			if (auto ptr = descriptorResource.lock()) {
+				descriptorWrites.emplace_back(ptr->createWrite(frame, descriptorSets[frame]));
+			}
 		}
-
-		std::array<VkWriteDescriptorSet, 2> descriptorWrites;
-		descriptorWrites[0] = (*descriptors.uniformObject).createWrite(frame, descriptorSets[frame]);
-		descriptorWrites[1] = (*descriptors.textureObject).createWrite(frame, descriptorSets[frame]);
 
 		return descriptorWrites;
 	}
 
-	VkDescriptorSet& DescriptorSet::getDescriptorSet(uint32_t frame) {
-		if (descriptors.uniformObject.wait() != Manager::State::YES ||
-			descriptors.textureObject.wait() != Manager::State::YES) {
-			Alert("Failed to retrieve Descriptor Objects!", FATAL);
-			return descriptorSets[frame];
+	VkDescriptorSet& DescriptorSet::getDescriptorSet(uint32_t frame) 
+	{		
+		for (auto descriptorResource : descriptorResources) {
+			if (auto ptr = descriptorResource.lock()) {
+				ptr->update(frame);
+			}
 		}
-		
-		(*descriptors.uniformObject).update(frame);
-		(*descriptors.textureObject).update(frame);
 
 		return descriptorSets[frame];
 	}

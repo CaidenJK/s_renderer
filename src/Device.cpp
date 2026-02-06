@@ -577,7 +577,7 @@ namespace Render
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass = info.pipeline.getRenderPass();
-		renderPassInfo.framebuffer = info.swapChain.getFramebuffers()[imageIndex];
+		renderPassInfo.framebuffer = info.swapChain.getFramebuffers()[imageIndex]; // Here
 
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = info.swapChain.getExtent();
@@ -604,11 +604,7 @@ namespace Render
 			numberOfIndices = static_cast<uint32_t>(vb->getNumIndices());
 		}
 
-		for (auto& descriptorSet : info.descriptorSets) {
-			if (auto descriptor = descriptorSet.lock()) {
-				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline.getPipelineLayout(), 0, 1, &(descriptor->getDescriptorSet(m_currentFrame)), 0, nullptr);
-			}
-		}
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline.getPipelineLayout(), 0, 1, &(info.descriptorSet->getDescriptorSet(m_currentFrame)), 0, nullptr);
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;
@@ -825,6 +821,7 @@ namespace Render
 
 	void Device::createDescriptorSetLayout()
 	{
+		/*
 		VkDescriptorSetLayoutBinding uboLayoutBinding{};
 		uboLayoutBinding.binding = 0;
 		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -840,10 +837,21 @@ namespace Render
         samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
         std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
+		*/
+		std::vector<VkDescriptorSetLayoutBinding> bindings;
+		bindings.reserve(m_config.descriptorSetReservations.size());
+		
+		for (int i = 0; i < m_config.descriptorSetReservations.size(); i++) {
+			bindings[i].binding = m_config.descriptorSetReservations[i].indices;
+			bindings[i].descriptorType = m_config.descriptorSetReservations[i].types;
+			bindings[i].descriptorCount = m_config.descriptorSetReservations[i].count;
+			bindings[i].stageFlags = m_config.descriptorSetReservations[i].stage;
+			bindings[i].pImmutableSamplers = nullptr;
+		}
 
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());;
+		layoutInfo.bindingCount = static_cast<uint32_t>(m_config.descriptorSetReservations.size());
 		layoutInfo.pBindings = bindings.data();
 		
 		if (vkCreateDescriptorSetLayout(m_device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
@@ -878,7 +886,7 @@ namespace Render
 		}
 	}
 
-	 void Device::createDescriptorSets(std::shared_ptr<DescriptorSet>& descriptors)
+	 void Device::createDescriptorSets(std::shared_ptr<DescriptorSet>& descriptorSet)
     {
 		if (descriptorPool == VK_NULL_HANDLE || descriptorSetLayout == VK_NULL_HANDLE) {
 			Alert("Descriptor pool or set layout not ready before allocating descriptor sets.", FATAL);
@@ -893,13 +901,8 @@ namespace Render
 		allocInfo.descriptorSetCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
 		allocInfo.pSetLayouts = layouts.data();
 
-		descriptors->clear();
-		descriptors->create(allocInfo);
-
-		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-			auto descriptorWrites = descriptors->getInfo(i);
-			vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-		}
+		descriptorSet->clear();
+		descriptorSet->create(allocInfo);
     }
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL Device::debugCallback(

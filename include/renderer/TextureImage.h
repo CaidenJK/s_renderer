@@ -3,13 +3,13 @@
 #include <StarryManager.h>
 
 #include "ImageBuffer.h"
-#include "DescriptorObject.h"
+#include "DescriptorResource.h"
 
 namespace Render
 {
     class Device;
 
-    class TextureImage : public ImageBuffer, public DescriptorObject
+    class TextureImage : public ImageBuffer, public DescriptorResource
     {
         public:
             TextureImage();

@@ -28,12 +28,22 @@ namespace Render
 		ASSET_NAME("Vulkan Debugger")
 	};
 
+	struct DescriptorSetReservation
+	{
+		int indices;
+		VkDescriptorType types;
+		int count;
+		VkShaderStageFlagBits stage;
+	};
+
 	struct DeviceConfig
 	{
 		VkSampleCountFlagBits desiredMSAASamples = VK_SAMPLE_COUNT_1_BIT;
 		glm::vec3 clearColor;
 
 		std::weak_ptr<Window> window;
+
+		std::vector<DescriptorSetReservation> descriptorSetReservations;
 	};
 
 	struct DependencyConfig
@@ -46,7 +56,7 @@ namespace Render
 		Pipeline& pipeline;
 		SwapChain& swapChain;
 		
-		std::vector<std::weak_ptr<DescriptorSet>>& descriptorSets;
+		std::shared_ptr<DescriptorSet>& descriptorSet;
 
 		std::weak_ptr<Buffer>& Buffer;
 		std::weak_ptr<Canvas>& canvas;
@@ -94,7 +104,7 @@ namespace Render
 		void endSingleTimeCommands(VkCommandBuffer& commandBuffer);
 
 		VkDescriptorSetLayout& getDescriptorSetLayout() { return descriptorSetLayout; }
-		void createDescriptorSets(std::shared_ptr<DescriptorSet>& descriptors);
+		void createDescriptorSets(std::shared_ptr<DescriptorSet>& descriptorSet);
 
 		void fillImGuiInfo(ImGui_ImplVulkan_InitInfo* info);
 

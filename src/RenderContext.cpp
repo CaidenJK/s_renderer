@@ -33,7 +33,12 @@ namespace Render {
 		m_state.isInitialized = false;
 
 		m_config = config;
-		auto deviceConfig = DeviceConfig{ m_config.msaaSamples, m_config.clearColor, window};
+		std::vector<DescriptorSetReservation> setReservations{
+			{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT},
+			{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT}
+		};
+
+		auto deviceConfig = DeviceConfig{ m_config.msaaSamples, m_config.clearColor, window, setReservations};
 		m_renderDevice.init(deviceConfig);
 
 		m_shaders.init(m_renderDevice.getUUID(), { config.vertexShader, config.fragmentShader });
@@ -46,14 +51,16 @@ namespace Render {
 		m_renderSwapchain.generateFramebuffers(m_renderPipeline.getRenderPass());
 
 		m_window = window;
+
+		m_descriptorSet = std::make_shared<DescriptorSet>();
 	}
 
-	void RenderContext::Load(std::shared_ptr<DescriptorSet>& descriptor)
+	void RenderContext::Load(std::shared_ptr<DescriptorResource>& descriptorResource)
 	{
 		m_state.isInitialized = false;
 
-		descriptor->init(m_renderDevice.getUUID());
-		m_descriptors.emplace_back(descriptor);
+		std::weak_ptr<DescriptorResource> ptr = descriptorResource;
+		m_descriptorSet->addDescriptorResource(ptr);
 	}
 
 	void RenderContext::Load(std::shared_ptr<Buffer>& buffer)
@@ -86,14 +93,9 @@ namespace Render {
 	void RenderContext::Ready()
 	{
 		m_renderDevice.createDependencies({ (int)m_renderSwapchain.getImageCount() });
-		for (auto descriptor : m_descriptors) {
-			if (auto dscptr = descriptor.lock()) {
-				m_renderDevice.createDescriptorSets(dscptr);
-			}
-			else {
-				Alert("One or more Descriptor references are invalid", WARNING);
-			}
-		}
+
+		m_descriptorSet->init(m_renderDevice.getUUID());
+		m_renderDevice.createDescriptorSets(m_descriptorSet);
 
 		m_state.isInitialized = true;
 	}
@@ -137,7 +139,7 @@ namespace Render {
 		DrawInfo drawInfo = {
 			m_renderPipeline,
 			m_renderSwapchain,
-			m_descriptors,
+			m_descriptorSet,
 			m_buffer,
 			m_cnvs
 		};
@@ -153,11 +155,7 @@ namespace Render {
 		m_renderSwapchain.destroy();
 		m_renderPipeline.destroy();
 
-		for (auto descriptor : m_descriptors) {
-			if (auto dscptr = descriptor.lock()) {
-				dscptr->destroy();
-			}
-		}
+		m_descriptorSet->destroy();
 
 		m_renderDevice.destroy();
 	}

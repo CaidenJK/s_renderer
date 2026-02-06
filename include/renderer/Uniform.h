@@ -7,7 +7,7 @@
 
 #include "glm/glm.hpp"
 
-#include "DescriptorObject.h"
+#include "DescriptorResource.h"
 
 namespace Render 
 {
@@ -19,7 +19,7 @@ namespace Render
 
 	class Device;
 
-	class Uniform : public Manager::StarryAsset, public DescriptorObject
+	class Uniform : public Manager::StarryAsset, public DescriptorResource
 	{
 	public:
 		Uniform();
