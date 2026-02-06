@@ -57,8 +57,8 @@ namespace Render
 		RenderPass& renderPass;
 		SwapChain& swapChain;
 		
-		std::weak_ptr<DescriptorSet> descriptorSet;
-		std::weak_ptr<Buffer> Buffer;
+		std::vector<std::weak_ptr<DescriptorSet>> descriptorSets;
+		std::weak_ptr<Buffer> buffer;
 		std::weak_ptr<Canvas> canvas;
 	};
 

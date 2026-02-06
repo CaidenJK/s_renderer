@@ -53,18 +53,16 @@ namespace Render {
 
 		m_window = window;
 
-		m_descriptorSet = std::make_shared<DescriptorSet>();
-
 		m_masterBufferData = std::make_shared<Buffer>();
 		m_masterBufferData->init(m_renderDevice.getUUID());
 	}
 
-	void RenderContext::Load(std::shared_ptr<DescriptorResource>& descriptorResource)
+	void RenderContext::Load(std::shared_ptr<DescriptorSet>& descriptorSet)
 	{
 		m_state.isInitialized = false;
 
-		std::weak_ptr<DescriptorResource> ptr = descriptorResource;
-		m_descriptorSet->addDescriptorResource(ptr);
+		descriptorSet->init(m_renderDevice.getUUID());
+		m_descriptorSets.push_back(descriptorSet);
 	}
 
 	void RenderContext::Load(std::shared_ptr<VertexBufferData>& buffer)
@@ -97,8 +95,14 @@ namespace Render {
 	{
 		m_renderDevice.createDependencies({ (int)m_renderSwapchain.getImageCount() });
 
-		m_descriptorSet->init(m_renderDevice.getUUID());
-		m_renderDevice.createDescriptorSets(m_descriptorSet);
+		for (auto& descriptorSet : m_descriptorSets) {
+			if (auto ptr = descriptorSet.lock()) {
+				m_renderDevice.createDescriptorSets(ptr);
+			}
+			else {
+				Alert("One or more Descriptor Sets have expired.", WARNING);
+			}
+		}
 
 		m_masterBufferData->finalize();
 
@@ -145,7 +149,7 @@ namespace Render {
 			m_renderPipeline,
 			m_renderPass,
 			m_renderSwapchain,
-			m_descriptorSet,
+			m_descriptorSets,
 			m_masterBufferData,
 			m_cnvs
 		};
@@ -161,7 +165,14 @@ namespace Render {
 		m_renderSwapchain.destroy();
 		m_renderPipeline.destroy();
 
-		m_descriptorSet->destroy();
+		for (auto& descriptorSet : m_descriptorSets) {
+			if (auto ptr = descriptorSet.lock()) {
+				ptr->destroy();
+			}
+			else {
+				Alert("One or more Descriptor Sets have expired.", WARNING);
+			}
+		}
 
 		m_renderDevice.destroy();
 	}

@@ -594,16 +594,12 @@ namespace Render
 		// Start of recording
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline.getPipeline());
 
-		if (auto vb = info.Buffer.lock()) {
+		if (auto vb = info.buffer.lock()) {
 			VkBuffer buffers[] = { vb->getBuffer() };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
 
 			vkCmdBindIndexBuffer(commandBuffer, vb->getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
-		}
-
-		if (auto descriptor = info.descriptorSet.lock()) {
-			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline.getPipelineLayout(), 0, 1, &(descriptor->getDescriptorSet(m_currentFrame)), 0, nullptr);
 		}
 
 		VkViewport viewport{};
@@ -620,12 +616,15 @@ namespace Render
 		scissor.extent = info.swapChain.getExtent();
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-		if (auto vb = info.Buffer.lock()) {
+		if (auto vb = info.buffer.lock()) {
 			auto vertexOffsets = vb->getVertexOffsets();
 			auto indexOffsets = vb->getIndexOffsets();
 			auto indexSizes = vb->getIndexSizes();
 
 			for (int i = 0; i < vertexOffsets.size(); i++) {
+				if (auto descriptor = info.descriptorSets[i].lock()) {
+					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline.getPipelineLayout(), 0, 1, &(descriptor->getDescriptorSet(m_currentFrame)), 0, nullptr);
+				}
 				vkCmdDrawIndexed(commandBuffer, indexSizes[i], 1, indexOffsets[i], vertexOffsets[i], 0);
 			}
 		}

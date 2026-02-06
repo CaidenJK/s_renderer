@@ -56,7 +56,7 @@ namespace Render
 
 		void Init(std::shared_ptr<Window>& window, RenderConfig config);
 
-		void Load(std::shared_ptr<DescriptorResource>& descriptorResource);
+		void Load(std::shared_ptr<DescriptorSet>& descriptorSet);
 		void Load(std::shared_ptr<VertexBufferData>& buffer);
 
 		void Load(std::shared_ptr<Canvas>& canvas);
@@ -88,12 +88,10 @@ namespace Render
 		Pipeline m_renderPipeline{};
 		Shader m_shaders{};
 
-		std::shared_ptr<DescriptorSet> m_descriptorSet;
-
 		std::shared_ptr<Buffer> m_masterBufferData;
 
 		// extern
-		std::vector<std::weak_ptr<DescriptorResource>> m_descriptorResources;
+		std::vector<std::weak_ptr<DescriptorSet>> m_descriptorSets;
 		std::weak_ptr<Buffer> m_buffer;
 		std::weak_ptr<Canvas> m_cnvs;
 	};
