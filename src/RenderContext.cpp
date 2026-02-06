@@ -17,8 +17,32 @@
 
 namespace Render {
 
-	RenderConfig::RenderConfig(std::string vertShader, std::string fragShader, MSAAOptions msaa, glm::vec3 clearColor) :
-		vertexShader(vertShader), fragmentShader(fragShader), msaaSamples((VkSampleCountFlagBits)msaa), clearColor(clearColor) {}
+	std::vector<DescriptorSetReservation> DescriptorInfo::decode(std::vector<DescriptorInfo> info)
+	{
+		std::vector<DescriptorSetReservation> sets;
+		for (int i = 0; i < info.size(); i++) {
+			DescriptorSetReservation reservation{};
+			reservation.indices = i;
+			reservation.count = info[i].count;
+			if (info[i].type == UNIFORM_BUFFER) {
+				reservation.stage = VK_SHADER_STAGE_VERTEX_BIT;
+				reservation.types = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			}
+			else if (info[i].type == IMAGE_SAMPLER) {
+				reservation.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+				reservation.types = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			}
+
+			sets.push_back(reservation);
+		}
+
+		return sets;
+	}
+
+	RenderConfig::RenderConfig(std::string vertShader, std::string fragShader, MSAAOptions msaa, 
+			glm::vec3 clearColor, std::vector<DescriptorInfo> descriptorInfo) :
+		vertexShader(vertShader), fragmentShader(fragShader), msaaSamples((VkSampleCountFlagBits)msaa), 
+			clearColor(clearColor),  descriptorInfo(descriptorInfo) {}
 
 	RenderContext::~RenderContext() 
 	{
@@ -33,10 +57,7 @@ namespace Render {
 		m_state.isInitialized = false;
 
 		m_config = config;
-		std::vector<DescriptorSetReservation> setReservations{
-			{0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT},
-			{1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT}
-		};
+		auto setReservations = DescriptorInfo::decode(config.descriptorInfo);
 
 		auto deviceConfig = DeviceConfig{ m_config.msaaSamples, m_config.clearColor, window, setReservations};
 		m_renderDevice.init(deviceConfig);

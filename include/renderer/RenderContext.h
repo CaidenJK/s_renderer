@@ -21,6 +21,18 @@ namespace Render
 		The Starry Render Engine API class. Manages and interfaces with the Vulkan rendering context.
 	*/
 
+	struct DescriptorInfo {
+		enum DescriptorType {
+			UNIFORM_BUFFER,
+			IMAGE_SAMPLER
+		};
+
+		DescriptorType type;
+		int count;
+
+		static std::vector<DescriptorSetReservation> decode(std::vector<DescriptorInfo> info);
+	};
+
 	struct RenderConfig {
 		enum MSAAOptions {
 			MSAA_DISABLED = VK_SAMPLE_COUNT_1_BIT,
@@ -40,7 +52,10 @@ namespace Render
 		VkSampleCountFlagBits msaaSamples;
 		glm::vec3 clearColor;
 
-		RenderConfig(std::string vertShader, std::string fragShader, MSAAOptions msaa, glm::vec3 clearColor);
+		std::vector<DescriptorInfo> descriptorInfo;
+
+		RenderConfig(std::string vertShader, std::string fragShader, MSAAOptions msaa, 
+			glm::vec3 clearColor, std::vector<DescriptorInfo> descriptorInfo);
 		RenderConfig() {}
 	};
 
