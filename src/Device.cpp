@@ -593,15 +593,13 @@ namespace Render
 
 		// Start of recording
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline.getPipeline());
-		
-		uint32_t numberOfIndices = 0;
+
 		if (auto vb = info.Buffer.lock()) {
 			VkBuffer buffers[] = { vb->getBuffer() };
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
 
 			vkCmdBindIndexBuffer(commandBuffer, vb->getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
-			numberOfIndices = static_cast<uint32_t>(vb->getNumIndices());
 		}
 
 		if (auto descriptor = info.descriptorSet.lock()) {
@@ -622,7 +620,18 @@ namespace Render
 		scissor.extent = info.swapChain.getExtent();
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-		vkCmdDrawIndexed(commandBuffer, numberOfIndices, 1, 0, 0, 0);
+		if (auto vb = info.Buffer.lock()) {
+			auto vertexOffsets = vb->getVertexOffsets();
+			auto indexOffsets = vb->getIndexOffsets();
+			auto indexSizes = vb->getIndexSizes();
+
+			for (int i = 0; i < vertexOffsets.size(); i++) {
+				vkCmdDrawIndexed(commandBuffer, indexSizes[i], 1, indexOffsets[i], vertexOffsets[i], 0);
+			}
+		}
+		else {
+			vkCmdDrawIndexed(commandBuffer, 0, 1, 0, 0, 0);
+		}
 
 		if (auto canvas = info.canvas.lock()) {
 			canvas->Record(commandBuffer);

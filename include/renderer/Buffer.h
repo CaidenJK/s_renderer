@@ -46,6 +46,11 @@ namespace Render
 			size_t getNumIndices() { return indices.empty() ? 0 : indices.size(); }
 			VkBuffer& getBuffer() { return buffer; }
 			VkBuffer& getIndexBuffer() { return indexBuffer; }
+			
+			std::vector<uint32_t>& getVertexOffsets() { return offsets[0]; }
+			std::vector<uint32_t>& getIndexOffsets() { return offsets[1]; }
+
+			std::vector<uint32_t>& getIndexSizes() { return sizes[1]; }
 
 			virtual ASSET_NAME("Buffer")
 
