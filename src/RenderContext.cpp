@@ -181,10 +181,14 @@ namespace Render {
 	void RenderContext::Destroy()
 	{
 		m_state.isInitialized = false;
+		m_renderDevice.waitIdle();
 		
 		m_shaders.destroy();
 		m_renderSwapchain.destroy();
+		m_renderPass.destroy();
 		m_renderPipeline.destroy();
+
+		m_masterBufferData->destroy();
 
 		for (auto& descriptorSet : m_descriptorSets) {
 			if (auto ptr = descriptorSet.lock()) {
@@ -193,6 +197,10 @@ namespace Render {
 			else {
 				Alert("One or more Descriptor Sets have expired.", WARNING);
 			}
+		}
+
+		if (auto canvas = m_cnvs.lock()) {
+			canvas->destroy();
 		}
 
 		m_renderDevice.destroy();

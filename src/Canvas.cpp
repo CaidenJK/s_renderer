@@ -14,6 +14,7 @@ namespace Render
 
     Canvas::~Canvas()
     {
+        destroy();
     }
 
     void Canvas::constructImGuiInfo(RenderPass& renderPass, SwapChain& swapChain)

@@ -41,9 +41,9 @@ namespace Render
 
 		UniformData buffer;
 
-		std::vector<VkBuffer> Uniforms;
-		std::vector<VkDeviceMemory> UniformsMemory;
-		std::vector<void*> UniformsMapped;
+		std::vector<VkBuffer> uniforms;
+		std::vector<VkDeviceMemory> uniformsMemory;
+		std::vector<void*> uniformsMapped;
 
 		VkDescriptorBufferInfo bufferInfo{};
 

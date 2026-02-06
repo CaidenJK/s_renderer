@@ -12,7 +12,6 @@ namespace Render
 	
 	Uniform::~Uniform()
 	{
-		Alert("UNIFORM DESTRUCT!", CRITICAL);
 		destroy();
 	}
 
@@ -25,40 +24,43 @@ namespace Render
 	void Uniform::destroy()
 	{
 		if (device) {
-			for (size_t i = 0; i < Uniforms.size(); i++) {
-				vkDestroyBuffer((*device).getDevice(), Uniforms[i], nullptr);
-				vkFreeMemory((*device).getDevice(), UniformsMemory[i], nullptr);
+			for (size_t i = 0; i < uniforms.size(); i++) {
+				vkDestroyBuffer((*device).getDevice(), uniforms[i], nullptr);
+				uniforms[i] = VK_NULL_HANDLE;
+				vkFreeMemory((*device).getDevice(), uniformsMemory[i], nullptr);
+				uniformsMemory[i] = VK_NULL_HANDLE;
+				uniformsMapped[i] = nullptr;
 			}
 		}
 	}
 
 	void Uniform::update(int frame)
 	{
-		memcpy(UniformsMapped[frame], &buffer, sizeof(buffer));
+		memcpy(uniformsMapped[frame], &buffer, sizeof(buffer));
 	}
 
 	void Uniform::createUniforms()
 	{
 		VkDeviceSize bufferSize = sizeof(buffer);
 
-		Uniforms.resize(MAX_FRAMES_IN_FLIGHT);
-		UniformsMemory.resize(MAX_FRAMES_IN_FLIGHT);
-		UniformsMapped.resize(MAX_FRAMES_IN_FLIGHT);
+		uniforms.resize(MAX_FRAMES_IN_FLIGHT);
+		uniformsMemory.resize(MAX_FRAMES_IN_FLIGHT);
+		uniformsMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
 		if (device.wait() != Manager::State::YES) {
 			Alert("Device died before it was ready to be used.", FATAL);
 			return;
 		}
 		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-			(*device).createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Uniforms[i], UniformsMemory[i]);
+			(*device).createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniforms[i], uniformsMemory[i]);
 
-			vkMapMemory((*device).getDevice(), UniformsMemory[i], 0, bufferSize, 0, &UniformsMapped[i]);
+			vkMapMemory((*device).getDevice(), uniformsMemory[i], 0, bufferSize, 0, &uniformsMapped[i]);
 		}
 	}
 
 	VkWriteDescriptorSet Uniform::createWrite(int frame, VkDescriptorSet& descriptorSet)
 	{
-		bufferInfo.buffer = Uniforms[frame];
+		bufferInfo.buffer = uniforms[frame];
 		bufferInfo.offset = 0;
 		bufferInfo.range = sizeof(UniformData);
 

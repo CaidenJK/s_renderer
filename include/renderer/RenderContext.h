@@ -107,7 +107,6 @@ namespace Render
 
 		// extern
 		std::vector<std::weak_ptr<DescriptorSet>> m_descriptorSets;
-		std::weak_ptr<Buffer> m_buffer;
 		std::weak_ptr<Canvas> m_cnvs;
 	};
 

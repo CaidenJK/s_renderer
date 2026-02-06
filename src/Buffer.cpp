@@ -25,25 +25,33 @@ namespace Render
 		if (device) {
 			if (buffer != VK_NULL_HANDLE) {
 				vkDestroyBuffer((*device).getDevice(), buffer, nullptr);
+				buffer = VK_NULL_HANDLE;
 				vkFreeMemory((*device).getDevice(), bufferMemory, nullptr);
+				bufferMemory = VK_NULL_HANDLE;
 			}
 
 			if (indexBuffer != VK_NULL_HANDLE) {
 				vkDestroyBuffer((*device).getDevice(), indexBuffer, nullptr);
+				indexBuffer = VK_NULL_HANDLE;
 				vkFreeMemory((*device).getDevice(), indexBufferMemory, nullptr);
+				indexBufferMemory = VK_NULL_HANDLE;
 			}
 
 			if (stagingBufferVertex != VK_NULL_HANDLE) {
 				vkDestroyBuffer((*device).getDevice(), stagingBufferVertex, nullptr);
+				stagingBufferVertex = VK_NULL_HANDLE;
 			}
 			if (stagingBufferMemoryVertex != VK_NULL_HANDLE) {
 				vkFreeMemory((*device).getDevice(), stagingBufferMemoryVertex, nullptr);
+				stagingBufferMemoryVertex = VK_NULL_HANDLE;
 			}
 			if (stagingBufferIndex != VK_NULL_HANDLE) {
 				vkDestroyBuffer((*device).getDevice(), stagingBufferIndex, nullptr);
+				stagingBufferIndex = VK_NULL_HANDLE;
 			}
 			if (stagingBufferMemoryIndex != VK_NULL_HANDLE) {
 				vkFreeMemory((*device).getDevice(), stagingBufferMemoryIndex, nullptr);
+				stagingBufferMemoryIndex = VK_NULL_HANDLE;
 			}
 		}
 		isReady = false;

@@ -73,6 +73,16 @@ namespace Render
 		if (m_instance) {
 			if (m_commandPool != VK_NULL_HANDLE) {
 				vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+				m_commandPool = VK_NULL_HANDLE;
+			}
+
+			if (descriptorPool != VK_NULL_HANDLE) {
+				vkDestroyDescriptorPool(m_device, descriptorPool, nullptr);
+				descriptorPool = VK_NULL_HANDLE;
+			}
+			if (descriptorSetLayout != VK_NULL_HANDLE) {
+				vkDestroyDescriptorSetLayout(m_device, descriptorSetLayout, nullptr);
+				descriptorSetLayout = VK_NULL_HANDLE;
 			}
 
 			for (auto imageAvailableSemaphore : m_imageAvailableSemaphores) {
@@ -86,6 +96,7 @@ namespace Render
 			}
 
 			vkDestroyDevice(m_device, nullptr); // ---- DEVICE DESTRUCTION ----
+			m_device = VK_NULL_HANDLE;
 
 			if (m_enableValidationLayers) {
 				DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);

@@ -25,7 +25,10 @@ namespace Render
         ImageBuffer::destroy();
 
         if (device) {
-            if (imageSampler != VK_NULL_HANDLE) vkDestroySampler((*device).getDevice(), imageSampler, nullptr);
+            if (imageSampler != VK_NULL_HANDLE) {
+                vkDestroySampler((*device).getDevice(), imageSampler, nullptr); 
+                imageSampler = VK_NULL_HANDLE;
+            }
         }
     }
     
