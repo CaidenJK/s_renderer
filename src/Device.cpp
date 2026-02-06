@@ -604,7 +604,9 @@ namespace Render
 			numberOfIndices = static_cast<uint32_t>(vb->getNumIndices());
 		}
 
-		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline.getPipelineLayout(), 0, 1, &(info.descriptorSet->getDescriptorSet(m_currentFrame)), 0, nullptr);
+		if (auto descriptor = info.descriptorSet.lock()) {
+			vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline.getPipelineLayout(), 0, 1, &(descriptor->getDescriptorSet(m_currentFrame)), 0, nullptr);
+		}
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;

@@ -6,47 +6,6 @@
 
 namespace Render 
 {
-	bool Vertex::operator==(const Vertex& other) const
-	{
-		return position == other.position && color == other.color && texCoord == other.texCoord;
-	}
-
-	VkVertexInputBindingDescription Vertex::getBindingDescriptions()
-	{
-		VkVertexInputBindingDescription bindingDescription{};
-		bindingDescription.binding = 0;
-		bindingDescription.stride = sizeof(Vertex);
-		bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		return bindingDescription;
-	}
-	std::array<VkVertexInputAttributeDescription, 4> Vertex::getAttributeDescriptions()
-	{
-		std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
-
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset = offsetof(Vertex, position);
-
-		attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[1].offset = offsetof(Vertex, normal);
-
-        attributeDescriptions[2].binding = 0;
-        attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[2].offset = offsetof(Vertex, color);
-
-        attributeDescriptions[3].binding = 0;
-        attributeDescriptions[3].location = 3;
-        attributeDescriptions[3].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[3].offset = offsetof(Vertex, texCoord);
-
-        return attributeDescriptions;
-	}
-
 	Buffer::Buffer()
 	{
 	}
@@ -59,8 +18,6 @@ namespace Render
 	void Buffer::init(size_t deviceUUID)
 	{
 		device = Request<Device>(deviceUUID, "self");
-
-		loadBufferToMemory();
 	}
 
 	void Buffer::destroy()
@@ -92,21 +49,38 @@ namespace Render
 		isReady = false;
 	}
 
-	void Buffer::add(Buffer& other)
+	void Buffer::loadData(VertexBufferData& data) 
 	{
+		bufferData[data.getID()] = data;
 		isReady = false;
-
-		destroy();
-
-		vertices.insert(vertices.end(), other.vertices.begin(), other.vertices.end());
-		indices.insert(indices.end(), other.indices.begin(), other.indices.end());
 	}
 
-	void Buffer::loadData(const std::vector<Vertex>& verticiesInput, const std::vector<uint32_t>& indiciesInput) 
+	void Buffer::removeData(size_t id)
 	{
-		vertices = verticiesInput;
-		indices = indiciesInput;
+		bufferData.erase(id);
 		isReady = false;
+	}
+
+	void Buffer::finalize()
+	{
+		vertices.clear();
+		indices.clear();
+		offsets[0].clear();
+		offsets[1].clear();
+		sizes[0].clear();
+		sizes[1].clear();
+
+		for(auto& data : bufferData) {
+			offsets[0].push_back(vertices.size());
+			sizes[0].push_back(data.second.getVertices().size());
+			vertices.insert(vertices.end(), data.second.getVertices().begin(), data.second.getVertices().end());
+
+			offsets[1].push_back(indices.size());
+			sizes[1].push_back(data.second.getIndices().size());
+			indices.insert(indices.end(), data.second.getIndices().begin(), data.second.getIndices().end());
+		}
+
+		loadBufferToMemory();
 	}
 
 	void Buffer::createBuffer() 

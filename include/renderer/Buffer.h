@@ -9,8 +9,11 @@
 
 #include <vector>
 #include <array>
+#include <map>
 
 #include <StarryManager.h>
+
+#include "VertexBufferData.h"
 
 // Helpful debug colors
 #define RED_COLOR glm::vec3(1.0f, 0.0f, 0.0f)
@@ -24,18 +27,6 @@
 
 namespace Render
 {
-	struct Vertex {
-		glm::vec3 position;
-		glm::vec3 normal;
-		glm::vec3 color;
-		glm::vec2 texCoord;
-
-		bool operator==(const Vertex& other) const;
-
-		static VkVertexInputBindingDescription getBindingDescriptions();
-		static std::array<VkVertexInputAttributeDescription, 4> getAttributeDescriptions();
-	};
-
 	class Device;
 
 	class Buffer : public Manager::StarryAsset {
@@ -46,16 +37,17 @@ namespace Render
 			void init(size_t deviceUUID);
 			void destroy();
 
-			void add(Buffer& other);
+			void loadData(VertexBufferData& data);
+			void removeData(size_t id);
 
-			void loadData(const std::vector<Vertex>& verticiesInput, const std::vector<uint32_t>& indiciesInput);
+			void finalize();
 
 			size_t getNumVertices() { return vertices.empty() ? 0 : vertices.size(); }
 			size_t getNumIndices() { return indices.empty() ? 0 : indices.size(); }
 			VkBuffer& getBuffer() { return buffer; }
 			VkBuffer& getIndexBuffer() { return indexBuffer; }
 
-			ASSET_NAME("Vertex Buffer")
+			virtual ASSET_NAME("Buffer")
 
 		private:
 			bool isReady = false;
@@ -68,8 +60,12 @@ namespace Render
 			void fillBufferData(VkDeviceMemory& bufferMemory);
 			void fillIndexBufferData(VkDeviceMemory& bufferMemory);
 
-			std::vector<Vertex> vertices = {};
-			std::vector<uint32_t> indices = {};
+			std::map<size_t, VertexBufferData> bufferData;
+			
+			std::vector<Vertex> vertices;
+			std::vector<uint32_t> indices;
+			std::array<std::vector<uint32_t>, 2> offsets;
+			std::array<std::vector<uint32_t>, 2> sizes;
 
 			VkBuffer stagingBufferVertex = VK_NULL_HANDLE;
 			VkDeviceMemory stagingBufferMemoryVertex = VK_NULL_HANDLE;
@@ -88,20 +84,6 @@ namespace Render
 			Manager::ResourceHandle<Device> device;
 	};
 }
-
-namespace std
-{
-	template<> struct std::hash<Render::Vertex>
-	{
-		size_t operator()(Render::Vertex const& vertex) const {
-			return ((((hash<glm::vec3>()(vertex.position) ^
-				(hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-				(hash<glm::vec2>()(vertex.texCoord) << 1)) >> 1) ^
-				(hash<glm::vec2>()(vertex.normal) << 1);
-		}
-	};
-}
-
 /*
 
 	float: VK_FORMAT_R32_SFLOAT

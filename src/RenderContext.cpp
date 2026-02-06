@@ -54,6 +54,9 @@ namespace Render {
 		m_window = window;
 
 		m_descriptorSet = std::make_shared<DescriptorSet>();
+
+		m_masterBufferData = std::make_shared<Buffer>();
+		m_masterBufferData->init(m_renderDevice.getUUID());
 	}
 
 	void RenderContext::Load(std::shared_ptr<DescriptorResource>& descriptorResource)
@@ -64,12 +67,11 @@ namespace Render {
 		m_descriptorSet->addDescriptorResource(ptr);
 	}
 
-	void RenderContext::Load(std::shared_ptr<Buffer>& buffer)
+	void RenderContext::Load(std::shared_ptr<VertexBufferData>& buffer)
 	{
 		m_state.isInitialized = false;
 
-		buffer->init(m_renderDevice.getUUID());
-		m_buffer = buffer;
+		m_masterBufferData->loadData(*buffer);
 	}
 
 	void RenderContext::Load(std::shared_ptr<Canvas>& canvas)
@@ -97,6 +99,8 @@ namespace Render {
 
 		m_descriptorSet->init(m_renderDevice.getUUID());
 		m_renderDevice.createDescriptorSets(m_descriptorSet);
+
+		m_masterBufferData->finalize();
 
 		m_state.isInitialized = true;
 	}
@@ -142,7 +146,7 @@ namespace Render {
 			m_renderPass,
 			m_renderSwapchain,
 			m_descriptorSet,
-			m_buffer,
+			m_masterBufferData,
 			m_cnvs
 		};
 		

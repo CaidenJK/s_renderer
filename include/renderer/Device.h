@@ -57,10 +57,9 @@ namespace Render
 		RenderPass& renderPass;
 		SwapChain& swapChain;
 		
-		std::shared_ptr<DescriptorSet>& descriptorSet;
-
-		std::weak_ptr<Buffer>& Buffer;
-		std::weak_ptr<Canvas>& canvas;
+		std::weak_ptr<DescriptorSet> descriptorSet;
+		std::weak_ptr<Buffer> Buffer;
+		std::weak_ptr<Canvas> canvas;
 	};
 
 	class Device : public Manager::StarryAsset {
