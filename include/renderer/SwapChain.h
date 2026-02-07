@@ -63,7 +63,10 @@ namespace Render
 			void needRecreate();
 			bool shouldRecreate() { return recreate; }
 
-			std::vector<VkFramebuffer>& getFramebuffers() { return swapChainFramebuffers; }
+			void aquireNextImage(uint32_t currentFrame);
+			void submitCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrame);
+
+			VkFramebuffer& getFramebuffer() { return swapChainFramebuffers[swapChainImageIndex]; }
 			VkSwapchainKHR& getSwapChain() { return swapChain; }
 			std::array<VkFormat, 2>& getImageFormats() { return imageFormats; }
 			VkExtent2D& getExtent() { return swapChainExtent; }
@@ -87,6 +90,8 @@ namespace Render
 			
 			void cleanupSwapChain();
 
+			void createSyncObjects();
+
 			VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
 			VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 			VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
@@ -104,6 +109,13 @@ namespace Render
 			std::shared_ptr<ImageBuffer> depthBuffer;
 
 			std::vector<VkFramebuffer> swapChainFramebuffers;
+
+			uint32_t swapChainImageIndex;
+
+			// Presentation
+			std::vector<VkSemaphore> m_imageAvailableSemaphores = {};
+			std::vector<VkSemaphore> m_renderFinishedSemaphores = {};
+			std::vector<VkFence> m_inFlightFences = {};
 
 			Manager::ResourceHandle<Device> device{};
 			Manager::ResourceHandle<Window> window{};

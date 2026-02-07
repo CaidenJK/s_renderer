@@ -57,6 +57,22 @@ namespace Render
 		isReady = false;
 	}
 
+	uint32_t Buffer::bind(VkCommandBuffer commandBuffer)
+	{
+		VkBuffer buffers[] = { buffer };
+		VkDeviceSize offsets[] = { 0 };
+		vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
+
+		vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+		return getNumberSubBuffers();
+	}
+
+	void Buffer::recordSubBuffer(VkCommandBuffer commandBuffer, uint32_t index)
+	{
+		vkCmdDrawIndexed(commandBuffer, sizes[1][index], 1, offsets[1][index], offsets[0][index], 0);
+	}
+
 	void Buffer::loadData(VertexBufferData& data) 
 	{
 		bufferData[data.getID()] = data;

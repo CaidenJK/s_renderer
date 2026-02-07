@@ -85,16 +85,6 @@ namespace Render
 				descriptorSetLayout = VK_NULL_HANDLE;
 			}
 
-			for (auto imageAvailableSemaphore : m_imageAvailableSemaphores) {
-				vkDestroySemaphore(m_device, imageAvailableSemaphore, nullptr);
-			}
-			for (auto renderFinishedSemaphore : m_renderFinishedSemaphores) {
-				vkDestroySemaphore(m_device, renderFinishedSemaphore, nullptr);
-			}
-			for (auto inFlightFence : m_inFlightFences) {
-				vkDestroyFence(m_device, inFlightFence, nullptr);
-			}
-
 			vkDestroyDevice(m_device, nullptr); // ---- DEVICE DESTRUCTION ----
 			m_device = VK_NULL_HANDLE;
 
@@ -507,88 +497,52 @@ namespace Render
 		}
 	}
 
-	void Device::createSyncObjects(DependencyConfig& config)
+	void Device::beginFrame(DrawInfo& info)
 	{
-		m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-		m_renderFinishedSemaphores.resize(config.imageCount);
-		m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+		info.currentCommandBuffer = VK_NULL_HANDLE;
 
-		VkSemaphoreCreateInfo semaphoreInfo{};
-		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		VkFenceCreateInfo fenceInfo{};
-		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-			if (vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i]) != VK_SUCCESS ||
-				vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]) != VK_SUCCESS) {
-
-				Alert("Failed to create synchronization objects for all frames!", FATAL);
-				return;
-			}
+		if (isFrameRendering) {
+			Alert("Cannot begin frame while a draw is already in progress.", CRITICAL);
+			return;
 		}
-		for (size_t i = 0; i < config.imageCount; i++) {
-			if (vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]) != VK_SUCCESS) {
-				Alert("Failed to create synchronization objects for all frames!", FATAL);
-				return;
-			}
-		}
-	}
 
-	void Device::createDependencies(DependencyConfig config)
-	{
+		ERROR_VOLATILE();
 		if (m_commandPool == VK_NULL_HANDLE) {
-			createCommmandPool();
-			createCommandBuffers();
+			Alert("Draw called before Device was fully initilized.", FATAL);
+			return;
 		}
-		for (auto imageAvailableSemaphore : m_imageAvailableSemaphores) {
-			vkDestroySemaphore(m_device, imageAvailableSemaphore, nullptr);
-		}
-		m_imageAvailableSemaphores.clear();
-		for (auto renderFinishedSemaphore : m_renderFinishedSemaphores) {
-			vkDestroySemaphore(m_device, renderFinishedSemaphore, nullptr);
-		}
-		m_renderFinishedSemaphores.clear();
-		for (auto inFlightFence : m_inFlightFences) {
-			vkDestroyFence(m_device, inFlightFence, nullptr);
-		}
-		m_inFlightFences.clear();
 
-		createSyncObjects(config);
-	}
+		isFrameRendering = true;
 
-	// For each command buffer
-	// Render Pass
-	// Swap Chain FrameBuffers
-	// Swap Chain Extent
-	// Clear Values
-	// Vertex Buffers -> VkBuffer vertex, VkBuffer index
-	// update Uniform Buffers
-	// bind Uniform Buffer Descriptor Sets with Pipeline Layout
+		info.swapChain.aquireNextImage(m_currentFrame);
+		if (info.swapChain.shouldRecreate()) {
+			return;
+		}
 
-	/* input struct ->
-		descriptors
-		buffer - one for now, join on ready
-		swapChain
-		renderPass
-	<- */ 
-	void Device::recordCommandBuffer(DrawInfo& info, VkCommandBuffer commandBuffer, uint32_t imageIndex) 
-	{
+		info.currentCommandBuffer = m_commandBuffers[m_currentFrame];
+
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = 0; // Optional
 		beginInfo.pInheritanceInfo = nullptr; // Optional
 
-		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+		if (vkBeginCommandBuffer(info.currentCommandBuffer, &beginInfo) != VK_SUCCESS) {
 			Alert("Failed to begin recording command buffer", FATAL);
+			return;
+		}
+	}
+
+	void Device::startSwapChainRenderPass(DrawInfo& info)
+	{
+		if (!isFrameRendering) {
+			Alert("Cannot start pass while a draw is not in progress.", CRITICAL);
 			return;
 		}
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass = info.renderPass.getRenderPass();
-		renderPassInfo.framebuffer = info.swapChain.getFramebuffers()[imageIndex]; // Here
+		renderPassInfo.framebuffer = info.swapChain.getFramebuffer(); // Here
 
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = info.swapChain.getExtent();
@@ -600,18 +554,7 @@ namespace Render
 		renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 		renderPassInfo.pClearValues = clearValues.data();
 
-		vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-		// Start of recording
-		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline.getPipeline());
-
-		if (auto vb = info.buffer.lock()) {
-			VkBuffer buffers[] = { vb->getBuffer() };
-			VkDeviceSize offsets[] = { 0 };
-			vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
-
-			vkCmdBindIndexBuffer(commandBuffer, vb->getIndexBuffer(), 0, VK_INDEX_TYPE_UINT32);
-		}
+		vkCmdBeginRenderPass(info.currentCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;
@@ -620,121 +563,40 @@ namespace Render
 		viewport.height = static_cast<float>(info.swapChain.getExtent().height);
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
-		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+		vkCmdSetViewport(info.currentCommandBuffer, 0, 1, &viewport);
 
 		VkRect2D scissor{};
 		scissor.offset = { 0, 0 };
 		scissor.extent = info.swapChain.getExtent();
-		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+		vkCmdSetScissor(info.currentCommandBuffer, 0, 1, &scissor);
+	}
 
-		info.pushConstant.bind(commandBuffer, info.pipeline.getPipelineLayout());
-
-		if (auto vb = info.buffer.lock()) {
-			auto vertexOffsets = vb->getVertexOffsets();
-			auto indexOffsets = vb->getIndexOffsets();
-			auto indexSizes = vb->getIndexSizes();
-
-			for (int i = 0; i < vertexOffsets.size(); i++) {
-				if (auto descriptor = info.descriptorSets[i].lock()) {
-					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, info.pipeline.getPipelineLayout(), 0, 1, &(descriptor->getDescriptorSet(m_currentFrame)), 0, nullptr);
-				}
-				vkCmdDrawIndexed(commandBuffer, indexSizes[i], 1, indexOffsets[i], vertexOffsets[i], 0);
-			}
-		}
-		else {
-			vkCmdDrawIndexed(commandBuffer, 0, 1, 0, 0, 0);
+	void Device::endSwapChainRenderPass(DrawInfo& info)
+	{
+		if (!isFrameRendering) {
+			Alert("Cannot end pass while a draw is not in progress.", CRITICAL);
+			return;
 		}
 
-		if (auto canvas = info.canvas.lock()) {
-			canvas->Record(commandBuffer);
+		vkCmdEndRenderPass(info.currentCommandBuffer);
+	}
+
+	void Device::endFrame(DrawInfo& info)
+	{
+		if (!isFrameRendering) {
+			Alert("Cannot end frame while a draw is not in progress.", CRITICAL);
+			return;
 		}
 
-		// End
-		vkCmdEndRenderPass(commandBuffer);
-
-		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+		if (vkEndCommandBuffer(info.currentCommandBuffer) != VK_SUCCESS) {
 			Alert("Failed to record command buffer!", FATAL);
 			return;
 		}
-	}
 
-	// Draw Frame
-	// Swap Chain
-	// If VK_ERROR_OUT_OF_DATE_KHR, recreate swap chain
-	// If window resized, skip
-
-	void Device::draw(DrawInfo info)
-	{
-		ERROR_VOLATILE();
-		if (m_commandPool == VK_NULL_HANDLE ||
-			m_imageAvailableSemaphores.size() == 0 ||
-			m_renderFinishedSemaphores.size() == 0 ||
-			m_inFlightFences.size() == 0) {
-			Alert("Draw called before Device was fully initilized.", FATAL);
-			return;
-		}
-
-		vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
-
-		// Aquire image from swapchain
-		uint32_t imageIndex;
-		VkResult result = vkAcquireNextImageKHR(m_device, info.swapChain.getSwapChain(), UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE, &imageIndex);
-
-		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-			info.swapChain.shouldRecreate();
-			return;
-		}
-		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-			Alert("Failed to acquire swap chain image!", FATAL);
-			return;
-		}
-		
-		recordCommandBuffer(info, m_commandBuffers[m_currentFrame], imageIndex);
-		vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
-
-		//vkResetCommandBuffer(commandBuffers[currentFrame], 0);
-
-		VkSubmitInfo submitInfo{};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-		VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = waitSemaphores;
-		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &m_commandBuffers[m_currentFrame];
-		VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[imageIndex]};
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
-
-		if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]) != VK_SUCCESS) {
-			Alert("Failed to submit draw command buffer!", FATAL);
-			return;
-		}
-
-		VkPresentInfoKHR presentInfo{};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = signalSemaphores;
-		VkSwapchainKHR swapChains[] = { info.swapChain.getSwapChain() };
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = swapChains;
-		presentInfo.pImageIndices = &imageIndex;
-		presentInfo.pResults = nullptr; // Optional
-
-		result = vkQueuePresentKHR(m_presentQueue, &presentInfo);
-
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-			info.swapChain.shouldRecreate();
-			return;
-		}
-		else if (result != VK_SUCCESS) {
-			Alert("Failed to acquire swap chain image!", FATAL);
-			return;
-		}
-
+		info.swapChain.submitCommandBuffer(info.currentCommandBuffer, m_currentFrame);
 		m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+
+		isFrameRendering = false;
 	}
 
 	void Device::waitIdle() 

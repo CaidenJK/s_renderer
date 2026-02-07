@@ -41,6 +41,8 @@ namespace Render
 		VkPipelineLayout& getPipelineLayout() { return pipelineLayout; }
 		VkPipeline& getPipeline() { return graphicsPipeline; }
 
+		void record(VkCommandBuffer commandBuffer);
+
 		ASSET_NAME("Pipeline")
 
 	private:

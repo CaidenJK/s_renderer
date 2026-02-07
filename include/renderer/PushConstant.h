@@ -44,7 +44,7 @@ namespace Render
             void init(PushConstantConstructInfo info);
             void destroy();
             
-            void bind(VkCommandBuffer& commandBuffer, VkPipelineLayout& layout);
+            void record(VkCommandBuffer commandBuffer, VkPipelineLayout& layout);
 
             void addPushConstantData(void* data, int layoutIndex);
 

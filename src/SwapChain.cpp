@@ -22,11 +22,27 @@ namespace Render
 		window = Request<Window>(info.windowUUID, "self");
 
 		constructSwapChain();
+		createSyncObjects();
 	}
 
 	void SwapChain::destroy()
 	{
 		cleanupSwapChain();
+
+		if (device) {
+			for (auto imageAvailableSemaphore : m_imageAvailableSemaphores) {
+				vkDestroySemaphore((*device).getDevice(), imageAvailableSemaphore, nullptr);
+			}
+			m_imageAvailableSemaphores.clear();
+			for (auto renderFinishedSemaphore : m_renderFinishedSemaphores) {
+				vkDestroySemaphore((*device).getDevice(), renderFinishedSemaphore, nullptr);
+			}
+			m_renderFinishedSemaphores.clear();
+			for (auto inFlightFence : m_inFlightFences) {
+				vkDestroyFence((*device).getDevice(), inFlightFence, nullptr);
+			}
+			m_inFlightFences.clear();
+		}
 	}
 
 	void SwapChain::needRecreate()
@@ -233,6 +249,106 @@ namespace Render
 		if (device && swapChain) {
 			vkDestroySwapchainKHR((*device).getDevice(), swapChain, nullptr);
 			swapChain = VK_NULL_HANDLE;
+		}
+	}
+
+	void SwapChain::createSyncObjects()
+	{
+		m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+		m_renderFinishedSemaphores.resize(getImageCount());
+		m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+			if (vkCreateSemaphore((*device).getDevice(), &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i]) != VK_SUCCESS ||
+				vkCreateFence((*device).getDevice(), &fenceInfo, nullptr, &m_inFlightFences[i]) != VK_SUCCESS) {
+
+				Alert("Failed to create synchronization objects for all frames!", FATAL);
+				return;
+			}
+		}
+		for (size_t i = 0; i < getImageCount(); i++) {
+			if (vkCreateSemaphore((*device).getDevice(), &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]) != VK_SUCCESS) {
+				Alert("Failed to create synchronization objects for all frames!", FATAL);
+				return;
+			}
+		}
+	}
+
+	void SwapChain::aquireNextImage(uint32_t currentFrame)
+	{
+		if (m_imageAvailableSemaphores.size() == 0 ||
+			m_renderFinishedSemaphores.size() == 0 ||
+			m_inFlightFences.size() == 0) {
+			Alert("Cannot aquire image from uninitilized swapchain.", FATAL);
+			return;
+		}
+
+		vkWaitForFences((*device).getDevice(), 1, &m_inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+
+		// Aquire image from swapchain
+		VkResult result = vkAcquireNextImageKHR((*device).getDevice(), swapChain, UINT64_MAX, m_imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &swapChainImageIndex);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+			shouldRecreate();
+			return;
+		}
+		else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+			Alert("Failed to acquire swap chain image!", FATAL);
+			return;
+		}
+	}
+
+	void SwapChain::submitCommandBuffer(VkCommandBuffer& commandBuffer, uint32_t currentFrame)
+	{
+		vkResetFences((*device).getDevice(), 1, &m_inFlightFences[currentFrame]);
+
+		//vkResetCommandBuffer(commandBuffers[currentFrame], 0);
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+		VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[currentFrame] };
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitDstStageMask = waitStages;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+		VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[swapChainImageIndex]};
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		if (vkQueueSubmit((*device).getGraphicsQueue(), 1, &submitInfo, m_inFlightFences[currentFrame]) != VK_SUCCESS) {
+			Alert("Failed to submit draw command buffer!", FATAL);
+			return;
+		}
+
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = signalSemaphores;
+		VkSwapchainKHR swapChains[] = { swapChain };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+		presentInfo.pImageIndices = &swapChainImageIndex;
+		presentInfo.pResults = nullptr; // Optional
+
+		auto result = vkQueuePresentKHR((*device).getPresentQueue(), &presentInfo);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+			shouldRecreate();
+			return;
+		}
+		else if (result != VK_SUCCESS) {
+			Alert("Failed to acquire swap chain image!", FATAL);
+			return;
 		}
 	}
 

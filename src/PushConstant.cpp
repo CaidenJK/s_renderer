@@ -46,7 +46,7 @@ namespace Render
         pcData.clear();
     }
 
-    void PushConstant::bind(VkCommandBuffer& commandBuffer, VkPipelineLayout& layout)
+    void PushConstant::record(VkCommandBuffer commandBuffer, VkPipelineLayout& layout)
     {
         for (auto data : pcData) {
             if (data.data) vkCmdPushConstants(commandBuffer, layout, 

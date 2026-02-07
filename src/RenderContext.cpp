@@ -114,8 +114,6 @@ namespace Render {
 
 	void RenderContext::Ready()
 	{
-		m_renderDevice.createDependencies({ (int)m_renderSwapchain.getImageCount() });
-
 		for (auto& descriptorSet : m_descriptorSets) {
 			if (auto ptr = descriptorSet.lock()) {
 				m_renderDevice.createDescriptorSets(ptr);
@@ -146,12 +144,8 @@ namespace Render {
 		m_renderSwapchain.generateFramebuffers(m_renderPass.getRenderPass());
 	}
 
-	void RenderContext::Draw()
+	void RenderContext::checkSwapChainRecreation() 
 	{
-		if (!m_state.isInitialized) {
-			Alert("Render Context not fully initialized before drawing!", FATAL);
-			return;
-		}
 		bool framebufferResized = false;
 		if (auto wndw = m_window.lock()) {
 			framebufferResized = wndw->wasFramebufferResized();
@@ -165,18 +159,47 @@ namespace Render {
 		if (framebufferResized || m_renderSwapchain.shouldRecreate()) {
 			recreateSwapchain();
 		}
+	}
+
+	void RenderContext::Draw()
+	{
+		if (!m_state.isInitialized) {
+			Alert("Render Context not fully initialized before drawing!", FATAL);
+			return;
+		}
+		checkSwapChainRecreation();
 
 		DrawInfo drawInfo = {
-			m_renderPipeline,
-			m_renderPass,
 			m_renderSwapchain,
-			m_pushConstant,
-			m_descriptorSets,
-			m_masterBufferData,
-			m_cnvs
+			m_renderPass
 		};
 		
-		m_renderDevice.draw(drawInfo);
+		m_renderDevice.beginFrame(drawInfo);
+		m_renderDevice.startSwapChainRenderPass(drawInfo);
+
+		// Start Record
+		
+		m_renderPipeline.record(drawInfo);
+
+		m_pushConstant.record(drawInfo, m_renderPipeline.getPipelineLayout());
+
+		auto numSubBuffers = m_masterBufferData->bind(drawInfo);
+
+		for (int i = 0; i < numSubBuffers; i++) {
+			if (auto descriptor = m_descriptorSets[i].lock()) {
+				descriptor->record(drawInfo, m_renderPipeline.getPipelineLayout(), m_renderDevice.getCurrentFrame());
+			}
+			m_masterBufferData->recordSubBuffer(drawInfo, i);
+		}
+
+		if (auto canvas = m_cnvs.lock()) {
+			canvas->record(drawInfo);
+		}
+
+		// End Record
+
+		m_renderDevice.endSwapChainRenderPass(drawInfo);
+		m_renderDevice.endFrame(drawInfo);
 	}
 
 	void RenderContext::Destroy()

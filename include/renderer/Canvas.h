@@ -38,7 +38,7 @@ namespace Render
             static bool isMouseControlledByImGUI();
 
             void PollEvents();
-            void Record(VkCommandBuffer commandBuffer);
+            void record(VkCommandBuffer commandBuffer);
 
             virtual ASSET_NAME("Canvas");
         protected:

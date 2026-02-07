@@ -34,7 +34,7 @@ namespace Render
             void addDescriptorResource(std::weak_ptr<DescriptorResource>& descriptorResource);
 		    VkDescriptorSet& getDescriptorSet(uint32_t frame);
 
-            void bind(VkCommandBuffer& commandBuffer, int frame);
+            void record(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t frame);
 
             virtual ASSET_NAME("Descriptor Set")
         protected:

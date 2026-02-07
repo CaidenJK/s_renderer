@@ -95,6 +95,7 @@ namespace Render
 
 		ASSET_NAME("Render Context")
 	private:
+		void checkSwapChainRecreation();
 		void recreateSwapchain();
 
 		RenderState m_state;
@@ -119,5 +120,4 @@ namespace Render
 	// call init
 	// load resources
 	// draw, finalize resources before first draw. If resources change, isinit = false
-
 }

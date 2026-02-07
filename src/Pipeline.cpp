@@ -40,6 +40,11 @@ namespace Render
 		}
 	}
 
+	void Pipeline::record(VkCommandBuffer commandBuffer)
+	{
+		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+	}
+
 	void Pipeline::constructPipelineLayout(RenderPass& renderPass, Shader& shader, PushConstant& pushConstant)
 	{
 		if (graphicsPipeline != VK_NULL_HANDLE || getAlertSeverity() == FATAL) {

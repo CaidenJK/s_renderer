@@ -96,4 +96,9 @@ namespace Render
 
 		return descriptorSets[frame];
 	}
+
+	void DescriptorSet::record(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t frame)
+	{
+		vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &(getDescriptorSet(frame)), 0, nullptr);
+	}
 }

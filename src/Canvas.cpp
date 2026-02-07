@@ -98,7 +98,7 @@ namespace Render
         drawStage.store(1);
     }
 
-    void Canvas::Record(VkCommandBuffer commandBuffer) // TODO: mutex for entire function
+    void Canvas::record(VkCommandBuffer commandBuffer) // TODO: mutex for entire function
     {
         if (drawStage.load() != 1) return;
         Display(); // User API

@@ -46,21 +46,14 @@ namespace Render
 		std::vector<DescriptorSetReservation> descriptorSetReservations;
 	};
 
-	struct DependencyConfig
-	{
-		int imageCount = 0;
-	};
-
 	struct DrawInfo
 	{
-		Pipeline& pipeline;
-		RenderPass& renderPass;
 		SwapChain& swapChain;
-		PushConstant& pushConstant;
-		
-		std::vector<std::weak_ptr<DescriptorSet>> descriptorSets;
-		std::weak_ptr<Buffer> buffer;
-		std::weak_ptr<Canvas> canvas;
+		RenderPass& renderPass;
+
+		VkCommandBuffer currentCommandBuffer = VK_NULL_HANDLE;
+
+		operator VkCommandBuffer() { return currentCommandBuffer; }
 	};
 
 	class Device : public Manager::StarryAsset {
@@ -83,17 +76,21 @@ namespace Render
 		VkSurfaceKHR& getSurface() { return m_surface; }
 		QueueFamilyIndices& getQueueFamilies() { return m_queueFamilyIndices; }
 
+		VkQueue getGraphicsQueue() { return m_graphicsQueue; }
+		VkQueue getPresentQueue() { return m_presentQueue; }
+
+		uint32_t getCurrentFrame() { return m_currentFrame; }
+
 		DeviceConfig& getConfig() { return m_config; }
 
 		void init(DeviceConfig config);
 		void destroy();
 
-		//void loadShader(std::shared_ptr<Shader>& shaderRef);
-		//void loadDescriptor(std::shared_ptr<Descriptor>& descriptor);
-		//void loadBuffer(std::shared_ptr<Buffer> buffer);
+		void beginFrame(DrawInfo& info);
+		void startSwapChainRenderPass(DrawInfo& info);
 
-		void createDependencies(DependencyConfig config); // Can call when need to update
-		void draw(DrawInfo info);
+		void endSwapChainRenderPass(DrawInfo& info);
+		void endFrame(DrawInfo& info);
 
 		void waitIdle();
 
@@ -127,10 +124,6 @@ namespace Render
 
 		void createCommmandPool();
 		void createCommandBuffers();
-
-		void createSyncObjects(DependencyConfig& config);
-
-		void recordCommandBuffer(DrawInfo& info, VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
 		std::vector<const char*> getRequiredGLFWExtensions();
 		void checkValidationLayerSupport();
@@ -193,12 +186,8 @@ namespace Render
 		VkCommandPool m_commandPool = VK_NULL_HANDLE;
 		std::vector<VkCommandBuffer> m_commandBuffers = {};
 
-		// Presentation
-		std::vector<VkSemaphore> m_imageAvailableSemaphores = {};
-		std::vector<VkSemaphore> m_renderFinishedSemaphores = {};
-		std::vector<VkFence> m_inFlightFences = {};
-
 		uint32_t m_currentFrame = 0;
+		bool isFrameRendering = false;
 
 		VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 		VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
