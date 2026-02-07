@@ -19,14 +19,16 @@ namespace Render
 
 		auto shader = Request<Shader>(info.shaderUUID, "self");
 		auto renderPass = Request<RenderPass>(info.renderPassUUID, "self");
+		auto pushConstant = Request<PushConstant>(info.pushConstantUUID, "self");
 
 		if (device.wait() != Manager::State::YES ||
 			shader.wait() != Manager::State::YES ||
-			renderPass.wait() != Manager::State::YES) {
+			renderPass.wait() != Manager::State::YES ||
+			pushConstant.wait() != Manager::State::YES) {
 			Alert("Resources died before they were ready to be used.", FATAL);
 			return;
 		}
-		constructPipelineLayout(*renderPass, *shader);
+		constructPipelineLayout(*renderPass, *shader, *pushConstant);
 	}
 
 	void Pipeline::destroy()
@@ -38,7 +40,7 @@ namespace Render
 		}
 	}
 
-	void Pipeline::constructPipelineLayout(RenderPass& renderPass, Shader& shader)
+	void Pipeline::constructPipelineLayout(RenderPass& renderPass, Shader& shader, PushConstant& pushConstant)
 	{
 		if (graphicsPipeline != VK_NULL_HANDLE || getAlertSeverity() == FATAL) {
 			Alert("Warning: constructPipeline called more than once. All calls other than the first are skipped.", WARNING);
@@ -129,8 +131,10 @@ namespace Render
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = 0; // Optional
-		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+
+		auto pcLayouts = pushConstant.getPushConstantRanges();
+		pipelineLayoutInfo.pushConstantRangeCount = pcLayouts.size();
+		pipelineLayoutInfo.pPushConstantRanges = pcLayouts.size() == 0 ? nullptr : pcLayouts.data();
 
 		if ((*device).getDescriptorSetLayout() == VK_NULL_HANDLE) {
 			Alert("Descriptor has error before pipeline construction!", FATAL);

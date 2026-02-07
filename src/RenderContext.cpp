@@ -40,9 +40,9 @@ namespace Render {
 	}
 
 	RenderConfig::RenderConfig(std::string vertShader, std::string fragShader, MSAAOptions msaa, 
-			glm::vec3 clearColor, std::vector<DescriptorInfo> descriptorInfo) :
+			glm::vec3 clearColor, std::vector<DescriptorInfo> descriptorInfo, std::vector<PushConstantInfo> pushConstantInfo) :
 		vertexShader(vertShader), fragmentShader(fragShader), msaaSamples((VkSampleCountFlagBits)msaa), 
-			clearColor(clearColor),  descriptorInfo(descriptorInfo) {}
+			clearColor(clearColor),  descriptorInfo(descriptorInfo), pushConstantInfo(pushConstantInfo) {}
 
 	RenderContext::~RenderContext() 
 	{
@@ -57,8 +57,8 @@ namespace Render {
 		m_state.isInitialized = false;
 
 		m_config = config;
-		auto setReservations = DescriptorInfo::decode(config.descriptorInfo);
 
+		auto setReservations = DescriptorInfo::decode(config.descriptorInfo);
 		auto deviceConfig = DeviceConfig{ m_config.msaaSamples, m_config.clearColor, window, setReservations};
 		m_renderDevice.init(deviceConfig);
 
@@ -67,7 +67,7 @@ namespace Render {
 		m_renderSwapchain.init(m_renderDevice.getUUID(), { window->getUUID() });
 		m_renderPass.init(m_renderDevice.getUUID(), {m_renderSwapchain.getImageFormats()});
 
-		PipelineConstructInfo info = { m_renderPass.getUUID(), m_shaders.getUUID() };
+		PipelineConstructInfo info = { m_renderPass.getUUID(), m_shaders.getUUID(), m_pushConstant.getUUID()};
 		m_renderPipeline.init(m_renderDevice.getUUID(), info);
 
 		m_renderSwapchain.generateFramebuffers(m_renderPass.getRenderPass());
@@ -170,6 +170,7 @@ namespace Render {
 			m_renderPipeline,
 			m_renderPass,
 			m_renderSwapchain,
+			m_pushConstant,
 			m_descriptorSets,
 			m_masterBufferData,
 			m_cnvs
@@ -189,6 +190,7 @@ namespace Render {
 		m_renderPipeline.destroy();
 
 		m_masterBufferData->destroy();
+		m_pushConstant.destroy();
 
 		for (auto& descriptorSet : m_descriptorSets) {
 			if (auto ptr = descriptorSet.lock()) {

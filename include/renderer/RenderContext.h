@@ -10,10 +10,12 @@
 #include "Buffer.h"
 #include "ImageBuffer.h"
 #include "TextureImage.h"
+#include "PushConstant.h"
 
 #include "Canvas.h"
 
 #define DEFAULT_SHADER_PATHS {}
+#define STARRY_NO_DATA {}
 
 namespace Render
 {
@@ -53,9 +55,10 @@ namespace Render
 		glm::vec3 clearColor;
 
 		std::vector<DescriptorInfo> descriptorInfo;
+		std::vector<PushConstantInfo> pushConstantInfo;
 
 		RenderConfig(std::string vertShader, std::string fragShader, MSAAOptions msaa, 
-			glm::vec3 clearColor, std::vector<DescriptorInfo> descriptorInfo);
+			glm::vec3 clearColor, std::vector<DescriptorInfo> descriptorInfo, std::vector<PushConstantInfo> pushConstantInfo);
 		RenderConfig() {}
 	};
 
@@ -75,7 +78,9 @@ namespace Render
 		void Load(std::shared_ptr<VertexBufferData>& buffer);
 
 		void Load(std::shared_ptr<Canvas>& canvas);
-		
+
+		void UpdatePushConstants(void* data, int layoutIndex) { m_pushConstant.addPushConstantData(data, layoutIndex);}
+
 		void Ready();
 		void Draw();
 
@@ -102,10 +107,11 @@ namespace Render
 		RenderPass m_renderPass{};
 		Pipeline m_renderPipeline{};
 		Shader m_shaders{};
-
-		std::shared_ptr<Buffer> m_masterBufferData;
+		PushConstant m_pushConstant;
 
 		// extern
+		std::shared_ptr<Buffer> m_masterBufferData; // TODO: maybe not ptr
+
 		std::vector<std::weak_ptr<DescriptorSet>> m_descriptorSets;
 		std::weak_ptr<Canvas> m_cnvs;
 	};

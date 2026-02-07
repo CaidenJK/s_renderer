@@ -627,6 +627,8 @@ namespace Render
 		scissor.extent = info.swapChain.getExtent();
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+		info.pushConstant.bind(commandBuffer, info.pipeline.getPipelineLayout());
+
 		if (auto vb = info.buffer.lock()) {
 			auto vertexOffsets = vb->getVertexOffsets();
 			auto indexOffsets = vb->getIndexOffsets();

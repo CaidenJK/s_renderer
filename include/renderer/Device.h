@@ -56,6 +56,7 @@ namespace Render
 		Pipeline& pipeline;
 		RenderPass& renderPass;
 		SwapChain& swapChain;
+		PushConstant& pushConstant;
 		
 		std::vector<std::weak_ptr<DescriptorSet>> descriptorSets;
 		std::weak_ptr<Buffer> buffer;

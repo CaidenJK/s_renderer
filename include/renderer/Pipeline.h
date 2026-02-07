@@ -12,6 +12,7 @@
 #include "Buffer.h"
 #include "Shader.h"
 #include "RenderPass.h"
+#include "PushConstant.h"
 
 #define ERROR_VOLATILE(x) x; if (getAlertSeverity() == FATAL) { return; }
 
@@ -23,6 +24,7 @@ namespace Render
 	{
 		size_t renderPassUUID;
 		size_t shaderUUID;
+		size_t pushConstantUUID;
 	};
 
 	class Pipeline : public Manager::StarryAsset {
@@ -42,7 +44,7 @@ namespace Render
 		ASSET_NAME("Pipeline")
 
 	private:
-		void constructPipelineLayout(RenderPass& renderPass, Shader& shader);
+		void constructPipelineLayout(RenderPass& renderPass, Shader& shader, PushConstant& pushConstant);
 
 		VkPipelineVertexInputStateCreateInfo createVertexInputInfo();
 
