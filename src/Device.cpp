@@ -733,7 +733,7 @@ namespace Render
         std::array<VkDescriptorSetLayoutBinding, 2> bindings = {uboLayoutBinding, samplerLayoutBinding};
 		*/
 		std::vector<VkDescriptorSetLayoutBinding> bindings;
-		bindings.reserve(m_config.descriptorSetReservations.size());
+		bindings.resize(m_config.descriptorSetReservations.size());
 		
 		for (int i = 0; i < m_config.descriptorSetReservations.size(); i++) {
 			bindings[i].binding = m_config.descriptorSetReservations[i].indices;
