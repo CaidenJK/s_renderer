@@ -39,10 +39,10 @@ namespace Render {
 		return sets;
 	}
 
-	RenderConfig::RenderConfig(std::string vertShader, std::string fragShader, MSAAOptions msaa, 
+	RenderConfig::RenderConfig(MSAAOptions msaa, 
 			glm::vec3 clearColor, std::vector<DescriptorInfo> descriptorInfo, std::vector<PushConstantInfo> pushConstantInfo) :
-		vertexShader(vertShader), fragmentShader(fragShader), msaaSamples((VkSampleCountFlagBits)msaa), 
-			clearColor(clearColor),  descriptorInfo(descriptorInfo), pushConstantInfo(pushConstantInfo) {}
+			msaaSamples((VkSampleCountFlagBits)msaa), clearColor(clearColor),  descriptorInfo(descriptorInfo), 
+			pushConstantInfo(pushConstantInfo) {}
 
 	RenderContext::~RenderContext() 
 	{
@@ -61,69 +61,40 @@ namespace Render {
 		auto setReservations = DescriptorInfo::decode(config.descriptorInfo);
 		auto deviceConfig = DeviceConfig{ m_config.msaaSamples, m_config.clearColor, window, setReservations};
 		m_renderDevice.init(deviceConfig);
-
-		m_shaders.init(m_renderDevice.getUUID(), { config.vertexShader, config.fragmentShader });
 		
 		m_renderSwapchain.init(m_renderDevice.getUUID(), { window->getUUID() });
 		m_renderPass.init(m_renderDevice.getUUID(), {m_renderSwapchain.getImageFormats()});
-
-		PipelineConstructInfo info = { m_renderPass.getUUID(), m_shaders.getUUID(), m_pushConstant.getUUID()};
-		m_renderPipeline.init(m_renderDevice.getUUID(), info);
 
 		m_renderSwapchain.generateFramebuffers(m_renderPass.getRenderPass());
 
 		m_window = window;
 
-		m_masterBufferData = std::make_shared<Buffer>();
-		m_masterBufferData->init(m_renderDevice.getUUID());
-	}
-
-	void RenderContext::Load(std::shared_ptr<DescriptorSet>& descriptorSet)
-	{
-		m_state.isInitialized = false;
-
-		descriptorSet->init(m_renderDevice.getUUID());
-		m_descriptorSets.push_back(descriptorSet);
-	}
-
-	void RenderContext::Load(std::shared_ptr<VertexBufferData>& buffer)
-	{
-		m_state.isInitialized = false;
-
-		m_masterBufferData->loadData(*buffer);
-	}
-
-	void RenderContext::Load(std::shared_ptr<Canvas>& canvas)
-	{
-		m_state.isInitialized = false;
-
-		if (auto window = m_window.lock()) {
-			CanvasConstructInfo info{
-				window->getUUID(),
-				m_renderPass.getUUID(),
-				m_renderSwapchain.getUUID()
-			};
-
-			canvas->init(m_renderDevice.getUUID(), info);
-			m_cnvs = canvas;
+		for (auto it = m_layouts.begin(); it != m_layouts.end(); ++it) {
+			if (auto lyt = it->second.lock()) {
+				lyt->Init({m_renderDevice.getUUID(), m_window.lock()->getUUID(), m_renderSwapchain.getUUID(), m_renderPass.getUUID()});
+			}
+			else {
+				m_layouts.erase(it);
+			}
 		}
-		else {
-			Alert("Window ref is expired!", CRITICAL);
-		}
+	}
+
+	void RenderContext::Add(std::shared_ptr<RenderLayout> layout)
+	{
+		m_state.isInitialized = false;
+		m_layouts.insert({layout->getPriority(), layout});
 	}
 
 	void RenderContext::Ready()
 	{
-		for (auto& descriptorSet : m_descriptorSets) {
-			if (auto ptr = descriptorSet.lock()) {
-				m_renderDevice.createDescriptorSets(ptr);
+		for (auto it = m_layouts.begin(); it != m_layouts.end(); ++it) {
+			if (auto lyt = it->second.lock()) {
+				lyt->Ready();
 			}
 			else {
-				Alert("One or more Descriptor Sets have expired.", WARNING);
+				m_layouts.erase(it);
 			}
 		}
-
-		m_masterBufferData->finalize();
 
 		m_state.isInitialized = true;
 	}
@@ -175,28 +146,18 @@ namespace Render {
 		};
 		
 		m_renderDevice.beginFrame(drawInfo);
+		if (m_renderSwapchain.shouldRecreate()) return;
+
 		m_renderDevice.startSwapChainRenderPass(drawInfo);
 
-		// Start Record
-		
-		m_renderPipeline.record(drawInfo);
-
-		m_pushConstant.record(drawInfo, m_renderPipeline.getPipelineLayout());
-
-		auto numSubBuffers = m_masterBufferData->bind(drawInfo);
-
-		for (int i = 0; i < numSubBuffers; i++) {
-			if (auto descriptor = m_descriptorSets[i].lock()) {
-				descriptor->record(drawInfo, m_renderPipeline.getPipelineLayout(), m_renderDevice.getCurrentFrame());
+		for (auto it = m_layouts.begin(); it != m_layouts.end(); ++it) {
+			if (auto lyt = it->second.lock()) {
+				lyt->Draw(drawInfo);
 			}
-			m_masterBufferData->recordSubBuffer(drawInfo, i);
+			else {
+				m_layouts.erase(it);
+			}
 		}
-
-		if (auto canvas = m_cnvs.lock()) {
-			canvas->record(drawInfo);
-		}
-
-		// End Record
 
 		m_renderDevice.endSwapChainRenderPass(drawInfo);
 		m_renderDevice.endFrame(drawInfo);
@@ -207,26 +168,15 @@ namespace Render {
 		m_state.isInitialized = false;
 		m_renderDevice.waitIdle();
 		
-		m_shaders.destroy();
 		m_renderSwapchain.destroy();
 		m_renderPass.destroy();
-		m_renderPipeline.destroy();
 
-		m_masterBufferData->destroy();
-		m_pushConstant.destroy();
-
-		for (auto& descriptorSet : m_descriptorSets) {
-			if (auto ptr = descriptorSet.lock()) {
-				ptr->destroy();
-			}
-			else {
-				Alert("One or more Descriptor Sets have expired.", WARNING);
+		for (auto layout : m_layouts) {
+			if (auto lyt = layout.second.lock()) {
+				lyt->Destroy();
 			}
 		}
-
-		if (auto canvas = m_cnvs.lock()) {
-			canvas->destroy();
-		}
+		m_layouts.clear();
 
 		m_renderDevice.destroy();
 	}

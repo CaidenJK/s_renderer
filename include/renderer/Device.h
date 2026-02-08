@@ -79,7 +79,7 @@ namespace Render
 		VkQueue getGraphicsQueue() { return m_graphicsQueue; }
 		VkQueue getPresentQueue() { return m_presentQueue; }
 
-		uint32_t getCurrentFrame() { return m_currentFrame; }
+		uint32_t getCurrentFrame();
 
 		DeviceConfig& getConfig() { return m_config; }
 

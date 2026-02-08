@@ -62,6 +62,15 @@ namespace Render
 		delete debugger;
 	}
 
+	uint32_t Device::getCurrentFrame()
+	{
+		if (!isFrameRendering) {
+			Alert("Cannot access frame while a frame is not rendering.", WARNING);
+			return 404;
+		}
+		return m_currentFrame;
+	}
+
 	void Device::init(DeviceConfig config)
 	{
 		m_config = config;

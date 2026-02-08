@@ -6,13 +6,8 @@
 
 #include "Window.h"
 #include "Device.h"
-#include "Uniform.h"
-#include "Buffer.h"
-#include "ImageBuffer.h"
-#include "TextureImage.h"
-#include "PushConstant.h"
 
-#include "Canvas.h"
+#include "RenderLayout.h"
 
 #define DEFAULT_SHADER_PATHS {}
 #define STARRY_NO_DATA {}
@@ -46,18 +41,13 @@ namespace Render
 			MSAA_64X = VK_SAMPLE_COUNT_64_BIT
 		};
 
-		std::shared_ptr<Window> window = nullptr;
-
-		std::string vertexShader;
-		std::string fragmentShader;
-
 		VkSampleCountFlagBits msaaSamples;
 		glm::vec3 clearColor;
 
 		std::vector<DescriptorInfo> descriptorInfo;
 		std::vector<PushConstantInfo> pushConstantInfo;
 
-		RenderConfig(std::string vertShader, std::string fragShader, MSAAOptions msaa, 
+		RenderConfig(MSAAOptions msaa, 
 			glm::vec3 clearColor, std::vector<DescriptorInfo> descriptorInfo, std::vector<PushConstantInfo> pushConstantInfo);
 		RenderConfig() {}
 	};
@@ -74,12 +64,7 @@ namespace Render
 
 		void Init(std::shared_ptr<Window>& window, RenderConfig config);
 
-		void Load(std::shared_ptr<DescriptorSet>& descriptorSet);
-		void Load(std::shared_ptr<VertexBufferData>& buffer);
-
-		void Load(std::shared_ptr<Canvas>& canvas);
-
-		void UpdatePushConstants(void* data, int layoutIndex) { m_pushConstant.addPushConstantData(data, layoutIndex);}
+		void Add(std::shared_ptr<RenderLayout> layout);
 
 		void Ready();
 		void Draw();
@@ -106,15 +91,8 @@ namespace Render
 		Device m_renderDevice{};
 		SwapChain m_renderSwapchain{};
 		RenderPass m_renderPass{};
-		Pipeline m_renderPipeline{};
-		Shader m_shaders{};
-		PushConstant m_pushConstant;
 
-		// extern
-		std::shared_ptr<Buffer> m_masterBufferData; // TODO: maybe not ptr
-
-		std::vector<std::weak_ptr<DescriptorSet>> m_descriptorSets;
-		std::weak_ptr<Canvas> m_cnvs;
+		std::map<uint32_t, std::weak_ptr<RenderLayout>> m_layouts;
 	};
 
 	// call init
